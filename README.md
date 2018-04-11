@@ -6,7 +6,7 @@ The concept is to have a block device driver on one end talking to a fileserver 
 
 ## The device driver
 
-The Linux kernel driver part is still in development and not working yet. The ser
+The Linux kernel driver part is still in development and not working yet.
 
 ## The file server
 
