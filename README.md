@@ -2,7 +2,7 @@
 
 SaWa is an attempt to write a networking filesystem on Linux.
 
-The 
+The concept is to have a block device driver on one end talking to a fileserver (running in userspace) which provides access to the data. Communications are done through TCP/IP.
 
 ## The device driver
 
