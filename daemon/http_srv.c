@@ -38,8 +38,8 @@ int strncasestr(const char *s, const char *find, const int max)
 		} while (strncasecmp(s, find, len) != 0);
 		s--;
 	}
-    printf("Found: %lx %lx\n", (unsigned long)s, (unsigned long)s_end);
-    printf("{{%s}}\n", s);
+//    printf("Found: %lx %lx\n", (unsigned long)s, (unsigned long)s_end);
+//    printf("{{%s}}\n", s);
 	return 1;
 }
 
@@ -138,7 +138,7 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     // Analysis over. Processing the request
     if (debug) printf("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
     
-    if (keep_alive) printf("{%s}\n", buffer_in);
+//    if (keep_alive) printf("{%s}\n", buffer_in);
 
     the_file = get_file(url);
     

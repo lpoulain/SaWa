@@ -14,20 +14,12 @@
 #include <fcntl.h>
 #include "sawa.h"
 #include "thread_pool.h"
+#include "display.h"
 
 int server_port = 5000;
 int debug = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////
-
-struct winsize w;
-
-void display() {
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-
-    printf ("lines %d\n", w.ws_row);
-    printf ("columns %d\n", w.ws_col);    
-}
 
 void error(const char *msg) {
     printf("Error: %s\n", msg);
@@ -41,6 +33,7 @@ void ctrl_c_handler(int s) {
     shutdown(socket_desc, SHUT_RDWR);
     printf("Shutting down...(%d connections dropped)\n", nb_conn);
     
+    display_cleanup();
     exit(1);
 }
 
@@ -86,6 +79,8 @@ int sawa_server_start() {
      
     //Accept and incoming connection
     printf("Server started on port %d\n", server_port);
+    display_init();
+
     c = sizeof(struct sockaddr_in);
      
     while( (client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
@@ -178,7 +173,7 @@ int main(int argc, char *argv[]) {
         HTTP_init();
     else
         sawa_init();
-    
+
     // Currently not working
     if (daemon) {
         start_as_daemon();

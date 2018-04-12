@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "sawa.h"
+#include "display.h"
 
 static int thread_nb = 0;
 
@@ -23,6 +24,7 @@ struct connection_thread {
     pthread_cond_t cv;
     pthread_mutex_t mp;
     int client_sock;
+    int nb_connections;
 };
 
 void (*op_listen) (int);
@@ -70,6 +72,8 @@ struct connection_thread *new_thread(int client_sock) {
     struct connection_thread *thread_info = malloc(sizeof(struct connection_thread));
     thread_info->next = NULL;
     thread_info->client_sock = client_sock;
+    thread_info->nb_connections = 1;
+    
     pthread_cond_init(&(thread_info->cv), NULL);
     pthread_mutex_init(&(thread_info->mp), NULL);
 
@@ -85,6 +89,8 @@ struct connection_thread *new_thread(int client_sock) {
         return 0;
     }    
 
+    display_new_thread(thread_info->nb);
+    display(thread_info->nb, thread_info->nb_connections);
     if (debug) printf("Created thread %d\n", thread_info->nb);
     
     return thread_info;
@@ -119,8 +125,10 @@ struct connection_thread *reuse_thread(int client_sock) {
     
     // Assign it to the connection
     thread_info->client_sock = client_sock;
+    thread_info->nb_connections++;
     
     // Wake up the thread
+    display(thread_info->nb, thread_info->nb_connections);
     if (debug) printf("Reuse thread %d\n", thread_info->nb);
     pthread_kill(thread_info->thread, SIGUSR1);
 //    pthread_cond_signal(&(thread_info->cv));
