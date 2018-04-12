@@ -1,1 +1,0 @@
-gigya.callback({"statusCode":200,"errorCode":0,"statusReason":"OK","callId":"2678cabbeecf4253b1e9c9e44e3fdcd5","time":"2018-04-07T02:06:31.509Z","context":"R2021692284"});
