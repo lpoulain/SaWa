@@ -89,9 +89,7 @@ struct connection_thread *new_thread(int client_sock) {
         return 0;
     }    
 
-    display_new_thread(thread_info->nb);
-    display(thread_info->nb, thread_info->nb_connections);
-    if (debug) printf("Created thread %d\n", thread_info->nb);
+    screen.new_thread(thread_info->nb);
     
     return thread_info;
 }
@@ -128,10 +126,8 @@ struct connection_thread *reuse_thread(int client_sock) {
     thread_info->nb_connections++;
     
     // Wake up the thread
-    display(thread_info->nb, thread_info->nb_connections);
-    if (debug) printf("Reuse thread %d\n", thread_info->nb);
+    screen.update(thread_info->nb, thread_info->nb_connections);
     pthread_kill(thread_info->thread, SIGUSR1);
-//    pthread_cond_signal(&(thread_info->cv));
     
     return thread_info;
 }

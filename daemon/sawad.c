@@ -33,7 +33,7 @@ void ctrl_c_handler(int s) {
     shutdown(socket_desc, SHUT_RDWR);
     printf("Shutting down...(%d connections dropped)\n", nb_conn);
     
-    display_cleanup();
+    screen.cleanup();
     exit(1);
 }
 
@@ -78,8 +78,7 @@ int sawa_server_start() {
     c = listen(socket_desc , 3);
      
     //Accept and incoming connection
-    printf("Server started on port %d\n", server_port);
-    display_init();
+    screen.init();
 
     c = sizeof(struct sockaddr_in);
      
@@ -179,6 +178,11 @@ int main(int argc, char *argv[]) {
         start_as_daemon();
         return 0;
     }
+    
+    if (debug == 1)
+        select_debug_display();
+    else
+        select_ncurses_display();
     
     if (thread_pool_init()) return 1;
 
