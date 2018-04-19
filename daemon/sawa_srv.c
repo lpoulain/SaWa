@@ -39,6 +39,7 @@ void read_file(int socket_fd, unsigned int offset, unsigned int size) {
     unsigned char *buffer = malloc(size);
     read(fd, buffer, size);
     printf("Sending data...\n");
+//    dump_mem(buffer, 32);
     write(socket_fd, buffer, size);
     printf("...%d bytes sent\n", size);
     free(buffer);
@@ -46,8 +47,10 @@ void read_file(int socket_fd, unsigned int offset, unsigned int size) {
 
 void write_file(int socket_fd, unsigned char *addr, unsigned int offset, unsigned int size) {
     printf("Write %d bytes starting at offset %d\n", size, offset);
+//    dump_mem(addr, 32);
     lseek(fd, offset, SEEK_SET);
     write(fd, addr, (ssize_t)size);
+    sync();
     printf("... done\n");
 }
 
@@ -87,8 +90,15 @@ void sawa_listen(int socket_fd) {
     for (;;) {
         n = read(socket_fd, buffer_in + size, 1024);
 //        printf("[%d] 0x%02x %02x %02x %02x\n", n, buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3]);
+        if (n < 0) return;
+        
         if (size == 0 && n >= sizeof(int)) {
             expected_size = *((unsigned int*)buffer_in) + 4;
+/*        printf("[%d] 0x%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", n,
+            buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3],
+            buffer_in[4], buffer_in[5], buffer_in[6], buffer_in[7],
+            buffer_in[8], buffer_in[9], buffer_in[10], buffer_in[11]);*/
+        
         }
         
         if (n == 0) {
@@ -100,11 +110,6 @@ void sawa_listen(int socket_fd) {
         }
         size += n;
 
-        printf("[%d] 0x%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", n,
-            buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3],
-            buffer_in[4], buffer_in[5], buffer_in[6], buffer_in[7],
-            buffer_in[8], buffer_in[9], buffer_in[10], buffer_in[11]);
-        
         if (size >= expected_size) {
             process_request(socket_fd, buffer_in, size);
             size = 0;

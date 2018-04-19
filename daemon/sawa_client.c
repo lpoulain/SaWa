@@ -43,9 +43,8 @@ void dump_mem(unsigned char *addr, int size) {
     }
 }
 
-void read_result(int socket_fd, int expected_size, int debug) {
+void read_result(int socket_fd, int expected_size, int debug, unsigned char *buffer_in) {
     int n, size=0;
-    unsigned char buffer_in[1024*1024];
     
     for (;;) {
 //        printf("Before reading...\n");
@@ -65,8 +64,9 @@ void read_result(int socket_fd, int expected_size, int debug) {
     }    
 }
 
-void send_read_cmd(int socket_fd, int offset, int payload_size) {
+unsigned char *send_read_cmd(int socket_fd, int offset, int payload_size) {
     unsigned char buffer_out[12];
+    unsigned char *buffer_in = malloc(payload_size);
     int *int_ptr = (int*)(buffer_out);
 
     *int_ptr = 1 +sizeof(int)*2;
@@ -77,14 +77,16 @@ void send_read_cmd(int socket_fd, int offset, int payload_size) {
     *int_ptr = payload_size;
 
     write(socket_fd, &buffer_out, 1 + sizeof(int)*3);
-    read_result(socket_fd, payload_size, 0);
+    read_result(socket_fd, payload_size, 0, buffer_in);
+    
+    return buffer_in;
 }
 
-void send_write_cmd(int socket_fd, int offset, int payload_size) {
+void send_write_cmd_random(int socket_fd, int offset, int payload_size) {
     unsigned char buffer_out[5000];
     int *int_ptr = (int*)(buffer_out);
     int i, buffer_start = 1 + 2*sizeof(int);
-    unsigned char c = (unsigned char)(payload_size % 256);
+    unsigned char c = 0xFF;
 
     *int_ptr = payload_size + 1 +sizeof(int);
     buffer_out[sizeof(int)] = SAWA_WRITE;
@@ -98,21 +100,38 @@ void send_write_cmd(int socket_fd, int offset, int payload_size) {
     write(socket_fd, &buffer_out, payload_size + buffer_start);
 }
 
+void send_write_cmd(int socket_fd, int offset, int payload_size, unsigned char *payload) {
+    unsigned char buffer_out[5000];
+    int *int_ptr = (int*)(buffer_out);
+    int i, buffer_start = 1 + 2*sizeof(int);
+    unsigned char c = (unsigned char)(payload_size % 256);
+
+    *int_ptr = payload_size + 1 +sizeof(int);
+    buffer_out[sizeof(int)] = SAWA_WRITE;
+    int_ptr = (int*)(buffer_out + 1 + sizeof(int));
+    *int_ptr = offset;
+    
+    strncpy(buffer_out + buffer_start, payload, payload_size);
+
+    write(socket_fd, &buffer_out, payload_size + buffer_start);
+}
+
 void send_info_cmd(int socket_fd) {
     unsigned char buffer_out[12];
     int *int_ptr = (int*)(buffer_out);
+    unsigned char result[4];
 
     *int_ptr = 1;
     buffer_out[sizeof(int)] = SAWA_INFO;
     
     write(socket_fd, buffer_out, 1 + sizeof(int));
-    read_result(socket_fd, sizeof(int), 1);
+    read_result(socket_fd, sizeof(int), 1, (unsigned char*)&result);
 }
 
 void sawa_send_command(int socket_fd, int op, int offset, int nb_bytes) {
     if (op == SAWA_INFO) send_info_cmd(socket_fd);
-    else if (op == SAWA_READ) send_read_cmd(socket_fd, offset, nb_bytes);
-    else if (op == SAWA_WRITE) send_write_cmd(socket_fd, offset, nb_bytes);
+    else if (op == SAWA_READ) free(send_read_cmd(socket_fd, offset, nb_bytes));
+    else if (op == SAWA_WRITE) send_write_cmd_random(socket_fd, offset, nb_bytes);
 }
 
 int sawa_client_init() {
@@ -145,7 +164,7 @@ static int test_nb_requests;
 
 void *sawa_thread_test(void *arg) {
     unsigned char *buffer = malloc(4096);
-    int i;
+    int i, j, k;
     long thread_id = (long)arg;
     int socket_fd;
 
@@ -153,9 +172,22 @@ void *sawa_thread_test(void *arg) {
     
     sawa_send_command(socket_fd, SAWA_INFO, 0, 0);
     
+    unsigned char *buffer_out = malloc(4096);
+    unsigned char *buffer_in;
+    
     for (i=0; i<256; i++) {
-        sawa_send_command(socket_fd, SAWA_READ, i*2048, 4096);
-        sawa_send_command(socket_fd, SAWA_WRITE, i*2048, 4096);
+        for (j=0; j<4096; j++) {
+            k = i + j;
+            buffer_out[j] = k % 256;
+        }
+    
+        send_write_cmd(socket_fd, i*4096, 4096, buffer_out);
+        buffer_in = send_read_cmd(socket_fd, i*4096, 4096);
+        
+        if (strncmp((const char *)buffer_in, (const char *)buffer_out, 4096) != 0)
+            printf("Error page %d, read/write operation failed\n", i);
+        
+        free(buffer_in);
     }
 
     close(socket_fd);
