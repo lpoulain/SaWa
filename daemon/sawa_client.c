@@ -49,8 +49,8 @@ void read_result(int socket_fd, int expected_size, int debug, unsigned char *buf
     for (;;) {
 //        printf("Before reading...\n");
         n = read(socket_fd, buffer_in + size, 1024);
-        if (debug)
-            printf("[%d] 0x%02x %02x %02x %02x\n", n, buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3]);
+//        if (debug)
+//            printf("[%d] 0x%02x %02x %02x %02x\n", n, buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3]);
         if (n <= 0) {
             if (size > 0) dump_mem(buffer_in, size);
             return;
@@ -111,16 +111,17 @@ void send_write_cmd(int socket_fd, int offset, int payload_size, unsigned char *
     int_ptr = (int*)(buffer_out + 1 + sizeof(int));
     *int_ptr = offset;
     
-    strncpy(buffer_out + buffer_start, payload, payload_size);
+    memcpy(buffer_out + buffer_start, payload, payload_size);
 
     write(socket_fd, &buffer_out, payload_size + buffer_start);
 }
 
-void send_info_cmd(int socket_fd) {
+void send_info_cmd() {
     unsigned char buffer_out[12];
     int *int_ptr = (int*)(buffer_out);
     unsigned char result[4];
 
+    int socket_fd = sawa_client_init();
     *int_ptr = 1;
     buffer_out[sizeof(int)] = SAWA_INFO;
     
@@ -129,8 +130,7 @@ void send_info_cmd(int socket_fd) {
 }
 
 void sawa_send_command(int socket_fd, int op, int offset, int nb_bytes) {
-    if (op == SAWA_INFO) send_info_cmd(socket_fd);
-    else if (op == SAWA_READ) free(send_read_cmd(socket_fd, offset, nb_bytes));
+    if (op == SAWA_READ) free(send_read_cmd(socket_fd, offset, nb_bytes));
     else if (op == SAWA_WRITE) send_write_cmd_random(socket_fd, offset, nb_bytes);
 }
 
@@ -164,7 +164,7 @@ static int test_nb_requests;
 
 void *sawa_thread_test(void *arg) {
     unsigned char *buffer = malloc(4096);
-    int i, j, k;
+    int i, j;
     long thread_id = (long)arg;
     int socket_fd;
 
@@ -177,10 +177,8 @@ void *sawa_thread_test(void *arg) {
     
     for (i=0; i<256; i++) {
         for (j=0; j<4096; j++) {
-            k = i + j;
-            buffer_out[j] = k % 256;
+            buffer_out[j] = (i + j) % 256;
         }
-    
         send_write_cmd(socket_fd, i*4096, 4096, buffer_out);
         buffer_in = send_read_cmd(socket_fd, i*4096, 4096);
         
@@ -197,7 +195,7 @@ void *sawa_thread_test(void *arg) {
     atomic_dec(&test_counter);
 }
 
-void sawa_test(int nb_requests, int nb_threads) {
+void sawa_test(int nb_threads) {
     pthread_t *tid = malloc(sizeof(pthread_t)*nb_threads);
     int i;
     debug = 0;
@@ -217,34 +215,58 @@ void sawa_test(int nb_requests, int nb_threads) {
 
 ////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char *argv[]) {
-    unsigned int op, offset, size;
-    int socket_fd, nb_requests, nb_threads;
-    
-    if (!strcmp(argv[1], "test")) {
-        if (argc >= 3) nb_requests = atoi(argv[2]); else nb_requests = 2000;
-        if (argc >= 4) nb_threads = atoi(argv[3]); else nb_threads = 10;
-        printf("Testing %d threads with %d requests/thread\n", nb_threads, nb_requests);
-        sawa_test(nb_requests, nb_threads);
-        return 0;
-    }
+void print_usage(char *prg) {
+    printf("Usage: %s info|read|write <parameters\n", prg);
+    printf("- %s info\n", prg);
+    printf("- %s read <offset> [<size>]\n", prg);
+    printf("- %s write <offset> [<size>]\n", prg);
+    printf("- %s test [nb threads]\n", prg);
+}
 
-    if (argc < 4) 
+int main(int argc, char *argv[]) {
+    unsigned int op, offset, size = 4096;
+    int socket_fd, nb_requests, nb_threads = 1;
+
+    if (argc < 2)
     {
-        printf("Usage: %s info|read|write <offset> <size>\n", argv[0]);
+        print_usage(argv[0]);
         return -1;
     }
     
-    if (!strcmp(argv[1], "info")) op = SAWA_INFO;
-    else if (!strcmp(argv[1], "read")) op = SAWA_READ;
+    if (!strcmp(argv[1], "info")) {
+        send_info_cmd();
+        return 0;
+    }
+    
+    if (!strcmp(argv[1], "test")) {
+//        if (argc >= 3) nb_requests = atoi(argv[2]); else nb_requests = 2000;
+        if (argc >= 3) nb_threads = atoi(argv[2]);
+        printf("Testing %d threads\n", nb_threads);
+        sawa_test(nb_threads);
+        return 0;
+    }
+
+    if (!strcmp(argv[1], "read")) op = SAWA_READ;
     else if (!strcmp(argv[1], "write")) op = SAWA_WRITE;
     else {
         printf("Unknown operation: %s\n", argv[1]);
         return -1;
     }
     
+    if (argc < 3) {
+        printf("Offset missing\n");
+        print_usage(argv[0]);
+        return -1;
+    }
+
     offset = atoi(argv[2]);
-    size = atoi(argv[3]);
+    
+    if (argc >= 4) size = atoi(argv[3]);
+    if (size <= 0) {
+        printf("Invalid size: %d\n", size);
+        print_usage(argv[0]);
+        return -1;
+    }
 
     printf("Operation %d, offset %d, size: %d\n", op, offset, size);
     socket_fd = sawa_client_init();

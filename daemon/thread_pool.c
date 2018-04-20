@@ -14,20 +14,12 @@
 #include <fcntl.h>
 #include "sawa.h"
 #include "display.h"
+#include "thread_pool.h"
 
 static int thread_nb = 0;
 
-struct connection_thread {
-    int nb;
-    struct connection_thread *next;
-    pthread_t thread;
-    pthread_cond_t cv;
-    pthread_mutex_t mp;
-    int client_sock;
-    int nb_connections;
-};
 
-void (*op_listen) (int);
+void (*op_listen) (struct connection_thread *);
 sigset_t fSigSet;
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -42,7 +34,7 @@ void *connection_handler(void *ti)
     int nSig;
 
     while (1) {
-        op_listen(thread_info->client_sock);
+        op_listen(thread_info);
         close(thread_info->client_sock);
         release_thread(thread_info);
         
@@ -51,7 +43,7 @@ void *connection_handler(void *ti)
         pthread_mutex_unlock(&(thread_info->mp));*/
         
         sigwait(&fSigSet, &nSig);
-        if (debug) printf("Resumed thread %d\n", thread_info->nb);
+        screen.debug("Resumed thread %d\n", thread_info->nb);
     }
      
     return 0;
@@ -69,10 +61,13 @@ struct connection_thread *all_threads = NULL;
 
 // There is no idle thread, so we create a new one
 struct connection_thread *new_thread(int client_sock) {
+    int i;
     struct connection_thread *thread_info = malloc(sizeof(struct connection_thread));
+    
     thread_info->next = NULL;
     thread_info->client_sock = client_sock;
     thread_info->nb_connections = 1;
+    for (i=0; i<3; i++) thread_info->info[i] = 0;
     
     pthread_cond_init(&(thread_info->cv), NULL);
     pthread_mutex_init(&(thread_info->mp), NULL);
@@ -89,7 +84,7 @@ struct connection_thread *new_thread(int client_sock) {
         return 0;
     }    
 
-    screen.new_thread(thread_info->nb);
+    screen.new_thread(thread_info);
     
     return thread_info;
 }
@@ -105,7 +100,7 @@ void release_thread(struct connection_thread *thread_info) {
 //        pthread_mutex_init(&(thread_info->mp), NULL);
     pthread_mutex_unlock(&idle_threads_lock);
 
-    if (debug) printf("Release thread %d\n", thread_info->nb);
+    screen.debug("Release thread %d\n", thread_info);
 }
 
 // Reuse an idle thread
@@ -126,7 +121,7 @@ struct connection_thread *reuse_thread(int client_sock) {
     thread_info->nb_connections++;
     
     // Wake up the thread
-    screen.update(thread_info->nb, thread_info->nb_connections);
+    screen.update(thread_info);
     pthread_kill(thread_info->thread, SIGUSR1);
     
     return thread_info;

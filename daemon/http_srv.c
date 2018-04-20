@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <search.h>
 #include "sawa.h"
+#include "thread_pool.h"
 
 const char *HTTP_200 = "HTTP/1.1 200 OK\nKeep-Alive: timeout=15, max=95\nConnection: Keep-Alive\n";
 const char *HTTP_404 = "HTTP/1.1 404 Not Found\nContent-Type: text/html; charset=UTF-8\nContent-Length: 12\n\nError 404 - Not found\n\n";
@@ -169,7 +170,8 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     return keep_alive;
 }
 
-void HTTP_listen(int socket_fd) {
+void HTTP_listen(struct connection_thread *thread_info) {
+    int socket_fd = thread_info->client_sock;
     int n = 1, size=0;
     unsigned int expected_size;
     struct request_message *top_msg = (struct request_message *)malloc(sizeof(struct request_message));

@@ -1,11 +1,15 @@
 void select_ncurses_display();
 void select_debug_display();
 
+struct connection_thread;
+
 struct display {
     void (*init)();
-    void (*new_thread)(int thread_no);
-    void (*update)(int thread_no, int nb_connections);
+    void (*new_thread)(struct connection_thread *);
+    void (*update)(struct connection_thread *);
     void (*cleanup)();
+    void (*debug)(char *, ...);
+    void (*refresh)(struct connection_thread *, int);
 };
 
 extern struct display screen;
