@@ -63,7 +63,7 @@ int tcp_client_connect(struct socket **conn_socket)
     ret = sock_create(PF_INET, SOCK_STREAM, IPPROTO_TCP, conn_socket);
     if(ret < 0)
     {
-            pr_info(" *** mtp | Error: %d while creating first socket. | "
+            pr_info("SaWa Error: %d while creating first socket. | "
                     "setup_connection *** \n", ret);
             return -1;
     }
@@ -77,7 +77,7 @@ int tcp_client_connect(struct socket **conn_socket)
                     , sizeof(saddr), O_RDWR);
     if(ret && (ret != -EINPROGRESS))
     {
-            pr_info(" *** mtp | Error: %d while connecting using conn "
+            pr_info("SaWa Error: %d while connecting using conn "
                     "socket. | setup_connection *** \n", ret);
             return -1;
     }
@@ -120,15 +120,13 @@ repeat_send:
         return written ? written:len;
 }
 
-int tcp_client_receive(struct socket *sock, char *str,\
-                        unsigned long flags)
+int tcp_client_receive(struct socket *sock, char *str, unsigned long flags, int max_size)
 {
         //mm_segment_t oldmm;
         struct msghdr msg;
         //struct iovec iov;
         struct kvec vec;
         int len;
-        int max_size = 4096;
 
         msg.msg_name    = 0;
         msg.msg_namelen = 0;
@@ -150,6 +148,5 @@ read_again:
         }
 
 
-        pr_info(" *** mtp | the server says: %s | tcp_client_receive *** \n", str);
         return len;
 }

@@ -17,10 +17,19 @@ clean:
 # run kernel build system to cleanup in current directory
 	$(MAKE) -C $(BUILDSYSTEM_DIR) M=$(PWD) clean
 
-test:
+ins:
 	dmesg -C
 	insmod ./$(TARGET_MODULE).ko
-	dmesg
+
+setup:
+	( echo n; echo; echo; echo; echo; echo w ) | fdisk /dev/sawa0
+	mkfs /dev/sawa0
+
+mount:
+	mount /dev/sawa0 /mnt/test
+
+umount:
+	umount /mnt/test
 
 end:
 	sudo rmmod ./$(TARGET_MODULE).ko

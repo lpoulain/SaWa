@@ -53,7 +53,7 @@ static struct request *current_req = NULL;
 
 static void blockdev_transfer(sector_t sector,
 		unsigned long nsect, char *buffer, int write) {
-    printk(KERN_INFO "SaWa: Request for %lu sectors starting at sector #%lu (write=%d)\n", nsect, sector, write);
+//    printk(KERN_INFO "SaWa: Request for %lu sectors starting at sector #%lu (write=%d)\n", nsect, sector, write);
     
     if (write == 0) {
         sawa_read_data(sector, nsect, buffer);

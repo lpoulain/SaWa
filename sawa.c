@@ -81,7 +81,7 @@ int sawa_send_info(void) {
     
     printk("SaWa: %x %x %x\n", buffer_in[0], tmp, *((int*)&buffer_out));
     
-    tcp_client_receive(conn_socket, (unsigned char *)&buffer_in, MSG_DONTWAIT);
+    tcp_client_receive(conn_socket, (unsigned char *)&buffer_in, MSG_DONTWAIT, 4);
     nb_sectors = *(unsigned int *)buffer_in;
     printk("SaWa: Number of sectors: %d\n", nb_sectors);
     
@@ -139,7 +139,7 @@ int sawa_read_data(sector_t sector, unsigned long nb_sectors, unsigned char *buf
     *int_ptr = payload_size;
 
     tcp_client_send(conn_socket, (const char *)&buffer_out, sizeof(int)*3 + 1, MSG_WAITALL);
-    tcp_client_receive(conn_socket, (unsigned char *)buffer_in, MSG_DONTWAIT);
+    tcp_client_receive(conn_socket, (unsigned char *)buffer_in, MSG_DONTWAIT, payload_size);
     
     sock_release(conn_socket);
     printk(KERN_INFO "SaWa: Read %lu sectors\n", nb_sectors);    
