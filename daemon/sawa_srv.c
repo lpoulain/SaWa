@@ -35,25 +35,25 @@ void send_info(int socket_fd) {
 }
 
 void read_file(int socket_fd, unsigned int offset, unsigned int size) {
-    screen.debug("Read %d bytes (0x%x) starting at offset %d\n", size, size, offset);
+    screen.debug("[%d] Read %d bytes (0x%x) starting at offset %d\n", socket_fd, size, size, offset);
     if (size + offset > nb_sectors * 512) size = nb_sectors * 512 - offset;
     lseek(fd, offset, SEEK_SET);
     unsigned char *buffer = malloc(size);
     read(fd, buffer, size);
-    screen.debug("Sending data...\n");
+    screen.debug("[%d] Sending data...\n", socket_fd);
 //    dump_mem(buffer, 32);
     write(socket_fd, buffer, size);
-    screen.debug("...%d bytes sent\n", size);
+    screen.debug("[%d] ...%d bytes sent\n", socket_fd, size);
     free(buffer);
 }
 
 void write_file(int socket_fd, unsigned char *addr, unsigned int offset, unsigned int size) {
-    screen.debug("Write %d bytes starting at offset %d\n", size, offset);
+    screen.debug("[%d] Write %d bytes starting at offset %d\n", socket_fd, size, offset);
 //    dump_mem(addr, 32);
     lseek(fd, offset, SEEK_SET);
     write(fd, addr, (ssize_t)size);
     sync();
-    screen.debug("... done\n");
+    screen.debug("[%d]... done\n", socket_fd);
 }
 
 void process_request(int socket_fd, struct connection_thread *thread_info, unsigned char *addr, unsigned int size) {
@@ -62,7 +62,8 @@ void process_request(int socket_fd, struct connection_thread *thread_info, unsig
     
 //    dump_mem(addr, size);
     
-    op = addr[sizeof(int)];
+//    op = addr[sizeof(int)];
+    op = addr[0];
     
     if (op == SAWA_INFO) {
         send_info(socket_fd);
@@ -71,18 +72,19 @@ void process_request(int socket_fd, struct connection_thread *thread_info, unsig
         return;
     }
     
-    offset = *((unsigned int*)(addr+1+sizeof(int)));
+//    offset = *((unsigned int*)(addr+1+sizeof(int)));
+    offset = *((unsigned int*)(addr+1));
 
     switch(op) {
         case SAWA_READ:
-            size = *((unsigned int*)(addr+1+2*sizeof(int)));
+            size = *((unsigned int*)(addr+1+sizeof(int)));
             read_file(socket_fd, offset, size);
             thread_info->info[1]++;
             screen.refresh(thread_info, 1);
             break;
         case SAWA_WRITE:
-            size -= (1 + sizeof(int)*2);
-            write_file(socket_fd, addr + 1 + sizeof(int)*2, offset, size);
+            size -= (1 + sizeof(int));
+            write_file(socket_fd, addr + 1 + sizeof(int), offset, size);
             thread_info->info[2]++;
             screen.refresh(thread_info, 2);
             break;
@@ -93,40 +95,28 @@ void sawa_listen(struct connection_thread *thread_info) {
     int socket_fd = thread_info->client_sock;
     int n, size=0;
     unsigned int expected_size;
-    unsigned char *buffer_in = malloc(nb_sectors * 512);
-    
+    unsigned char *buffer_in;
     
     for (;;) {
-        n = read(socket_fd, buffer_in + size, 1024);
-//        printf("[%d] 0x%02x %02x %02x %02x\n", n, buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3]);
-        if (n < 0) return;
-        
-        if (size == 0 && n >= sizeof(int)) {
-            expected_size = *((unsigned int*)buffer_in) + 4;
-/*        printf("[%d] 0x%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", n,
-            buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3],
-            buffer_in[4], buffer_in[5], buffer_in[6], buffer_in[7],
-            buffer_in[8], buffer_in[9], buffer_in[10], buffer_in[11]);*/
-        
-        }
-        
-        if (n == 0) {
-            if (size > 0) {
-                process_request(socket_fd, thread_info, buffer_in, size);
+    
+        n = read(socket_fd, (char*)(&expected_size), 4);
+        if (n < 4) return;
+
+        if (expected_size > 32768) return;
+
+        if (expected_size > 0) {
+            buffer_in = malloc(expected_size);
+            n = read(socket_fd, buffer_in, expected_size);
+    
+            if (n < 0) {
+                free(buffer_in);
+                return;
             }
+
+            process_request(socket_fd, thread_info, buffer_in, expected_size);
             free(buffer_in);
-            return;
         }
-        size += n;
-
-        if (size >= expected_size) {
-            process_request(socket_fd, thread_info, buffer_in, size);
-            size = 0;
-        }
-        
-
-//        printf("0x%02x (%d bytes)\n", buffer_in[0], n);
-    }    
+    }
 }
 
 int get_fs_file() {

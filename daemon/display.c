@@ -24,9 +24,9 @@ void display_init() {
     
     mvaddstr(0, 0, buffer);
     mvaddstr(1, 0, "Thread #   :");
-    mvaddstr(2, 0, "Connections:");
+    mvaddstr(3, 0, "Connections:");
     for (i=0; i<3; i++) {
-        if (info_label[i] != NULL) mvaddstr(3+i, 0, info_label[i]);
+        if (info_label[i] != NULL) mvaddstr(4+i, 0, info_label[i]);
     }
     
     refresh();
@@ -39,7 +39,7 @@ void display_refresh(struct connection_thread *thread_info, int i) {
         
     memset(buffer, 6, 0);
     sprintf(buffer, "%d", thread_info->info[i]);
-    mvaddstr(3+i, thread_info->nb * 6 + 14, buffer);
+    mvaddstr(4+i, thread_info->nb * 6 + 14, buffer);
 
     refresh();
 }
@@ -51,7 +51,7 @@ void display_thread_update(struct connection_thread *thread_info) {
         
     memset(buffer, 6, 0);
     sprintf(buffer, "%d", thread_info->nb_connections);
-    mvaddstr(2, thread_info->nb * 6 + 14, buffer);
+    mvaddstr(3, thread_info->nb * 6 + 14, buffer);
     
 /*    for (i=0; i<3; i++) {
         if (info_label[i] == NULL) continue;
@@ -79,6 +79,14 @@ void display_cleanup() {
     endwin();
 }
 
+void display_status(struct connection_thread *thread_info, int is_on) {
+    if (is_on)
+        mvaddstr(2, thread_info->nb * 6 + 14, "*");
+    else
+        mvaddstr(2, thread_info->nb * 6 + 14, ".");
+    refresh();
+}
+
 // No-op
 void display_debug(char *msg, ...) {
     
@@ -91,6 +99,7 @@ void select_ncurses_display() {
     screen.cleanup = display_cleanup;
     screen.debug = display_debug;
     screen.refresh = display_refresh;
+    screen.status = display_status;
     
     info_label[0] = "Info       :";
     info_label[1] = "Reads      :";
@@ -107,17 +116,22 @@ void debug_new_thread(struct connection_thread *thread_info) {
     printf("Created thread %d\n", thread_info->nb);    
 }
 
-void debug_thread_update(struct connection_thread *thread_info) {
-    
+void debug_print(char *format, ...) {
+    va_list argptr;
+    va_start(argptr, format);
+    vfprintf(stderr, format, argptr);
+    va_end(argptr);
 }
 
 void debug_cleanup() { }
 void debug_refresh() { }
+void debug_thread_update(struct connection_thread *thread_info) { }
 
-void debug_print(char *msg, ...) {
-    va_list ap;
-    
-    printf(msg, ap);
+void debug_status(struct connection_thread *thread_info, int is_on) {
+    if (is_on)
+        printf("Resumed thread %d\n", thread_info->nb);
+    else
+        printf("Release thread %d\n", thread_info->nb);
 }
 
 void select_debug_display() {
@@ -127,4 +141,5 @@ void select_debug_display() {
     screen.cleanup = debug_cleanup;
     screen.debug = debug_print;
     screen.refresh = debug_refresh;
+    screen.status = debug_status;
 }

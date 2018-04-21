@@ -10,6 +10,7 @@ struct display {
     void (*cleanup)();
     void (*debug)(char *, ...);
     void (*refresh)(struct connection_thread *, int);
+    void (*status)(struct connection_thread *, int);
 };
 
 extern struct display screen;

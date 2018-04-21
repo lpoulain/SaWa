@@ -168,6 +168,11 @@ int main(int argc, char *argv[]) {
         if (!strcmp(argv[i], "-http")) http = 1;
     }
 
+    if (debug == 1)
+        select_debug_display();
+    else
+        select_ncurses_display();
+    
     if (http)
         HTTP_init();
     else
@@ -178,11 +183,6 @@ int main(int argc, char *argv[]) {
         start_as_daemon();
         return 0;
     }
-    
-    if (debug == 1)
-        select_debug_display();
-    else
-        select_ncurses_display();
     
     if (thread_pool_init()) return 1;
 
