@@ -24,6 +24,7 @@ void display_init() {
     
     mvaddstr(0, 0, buffer);
     mvaddstr(1, 0, "Thread #   :");
+    mvaddstr(2, 0, "Active?    :");
     mvaddstr(3, 0, "Connections:");
     for (i=0; i<3; i++) {
         if (info_label[i] != NULL) mvaddstr(4+i, 0, info_label[i]);
@@ -52,15 +53,15 @@ void display_thread_update(struct connection_thread *thread_info) {
     memset(buffer, 6, 0);
     sprintf(buffer, "%d", thread_info->nb_connections);
     mvaddstr(3, thread_info->nb * 6 + 14, buffer);
-    
-/*    for (i=0; i<3; i++) {
-        if (info_label[i] == NULL) continue;
-        
-        memset(buffer, 6, 0);
-        sprintf(buffer, "%d", thread_info->info[i]);
-        mvaddstr(3+i, thread_info->nb * 6 + 14, buffer);
-    }
-    */
+
+    refresh();
+}
+
+void display_status(struct connection_thread *thread_info, int is_on) {
+    if (is_on)
+        mvaddstr(2, thread_info->nb * 6 + 14, "Y");
+    else
+        mvaddstr(2, thread_info->nb * 6 + 14, ".");
     refresh();
 }
 
@@ -73,18 +74,11 @@ void display_new_thread(struct connection_thread *thread_info) {
     mvaddstr(1, thread_info->nb * 6 + 14, buffer);
     
     display_thread_update(thread_info);
+    display_status(thread_info, 1);
 }
 
 void display_cleanup() {
     endwin();
-}
-
-void display_status(struct connection_thread *thread_info, int is_on) {
-    if (is_on)
-        mvaddstr(2, thread_info->nb * 6 + 14, "*");
-    else
-        mvaddstr(2, thread_info->nb * 6 + 14, ".");
-    refresh();
 }
 
 // No-op
