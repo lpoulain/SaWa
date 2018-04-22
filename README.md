@@ -7,25 +7,27 @@ SaWa is networking filesystem on Linux. It is composed of two pieces:
 
 ## The file server
 
-The fileserver listens to port 5000, uses a flat file for the filesystem and accepts three commands:
+The fileserver listens to port 5000, uses a flat file for the filesystem and accepts four commands:
 
 - Info, which returns the number of sectors
 - Read, which reads a certain number of bytes
 - Write, which writes some data at a certain offset
+- Stop, which stops the server
 
-    $ ./daemon/sawad [-debug]
+    $ ./server/sawad [-debug]
     Server started on port 5000
     
 To test the fileserver, `sawa-client` is also provided:
 
-    $ ./daemon/sawa-client info 0 0
-    $ ./daemon/sawa-client write 10 100
-    $ ./daemon/sawa-client read 10 100
-    $ ./daemon/sawa-client test 1 1
+    $ ./server/sawa-client info
+    $ ./server/sawa-client write 10 100
+    $ ./server/sawa-client read 10 100
+    $ ./server/sawa-client test 3
+    $ ./server/sawa-client stop
 
 ## The device driver
 
-The device driver is a Linux block driver which connects to the file server using TCP/IP (currently only on localhost) when it needs to access the data.
+The device driver is a Linux block driver which connects to the file server using TCP/IP (currently only on localhost) when it needs to access the data. See [here](./block_driver.md) for further information about how the device driver works.
 
 You must be logged as root to install and test it:
 
@@ -52,5 +54,5 @@ To uninstall the driver:
 
 `sawad` is designed to handle multiple connections (using different threads). In order to test how well `sawad` handles workload, it has an `-http` option which turns it into a rudimentary Web server, so it can be tested by tools such as `ab`.
 
-    ./daemon/sawad -http
-    ./daemon/sawad -http -debug
+    ./server/sawad -http
+    ./server/sawad -http -debug
