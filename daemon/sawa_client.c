@@ -129,6 +129,18 @@ void send_info_cmd() {
     read_result(socket_fd, sizeof(int), 1, (unsigned char*)&result);
 }
 
+void send_stop_cmd() {
+    unsigned char buffer_out[12];
+    int *int_ptr = (int*)(buffer_out);
+    unsigned char result[4];
+
+    int socket_fd = sawa_client_init();
+    *int_ptr = 1;
+    buffer_out[sizeof(int)] = SAWA_STOP;
+    
+    write(socket_fd, buffer_out, 1 + sizeof(int));
+}
+
 void sawa_send_command(int socket_fd, int op, int offset, int nb_bytes) {
     if (op == SAWA_READ) free(send_read_cmd(socket_fd, offset, nb_bytes));
     else if (op == SAWA_WRITE) send_write_cmd_random(socket_fd, offset, nb_bytes);
@@ -221,6 +233,7 @@ void print_usage(char *prg) {
     printf("- %s read <offset> [<size>]\n", prg);
     printf("- %s write <offset> [<size>]\n", prg);
     printf("- %s test [nb threads]\n", prg);
+    printf("- %s stop\n", prg);
 }
 
 int main(int argc, char *argv[]) {
@@ -235,6 +248,11 @@ int main(int argc, char *argv[]) {
     
     if (!strcmp(argv[1], "info")) {
         send_info_cmd();
+        return 0;
+    }
+    
+    if (!strcmp(argv[1], "stop")) {
+        send_stop_cmd();
         return 0;
     }
     

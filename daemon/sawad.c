@@ -34,7 +34,7 @@ void ctrl_c_handler(int s) {
     printf("Shutting down...(%d connections dropped)\n", nb_conn);
     
     screen.cleanup();
-    exit(1);
+    exit(0);
 }
 
 void set_ctrl_c_handler() {
@@ -122,8 +122,6 @@ void start_as_daemon() {
             exit(EXIT_FAILURE);
     }
 
-
-
     /* Change the current working directory */
     if ((chdir("/")) < 0) {
             /* Log the failure */
@@ -138,16 +136,7 @@ void start_as_daemon() {
     /* Daemon-specific initialization goes here */
 
     /* The Big Loop */
-/*    while (1) {
-
-        if (pthread_mutex_init(&lock, NULL) != 0)
-        {
-            printf("\n mutex init has failed\n");
-            return;
-        }
-
-        sawa_server_start();
-    }*/
+    sawa_server_start();
     exit(EXIT_SUCCESS);
 }
 
@@ -168,7 +157,9 @@ int main(int argc, char *argv[]) {
         if (!strcmp(argv[i], "-http")) http = 1;
     }
 
-    if (debug == 1)
+    if (daemon == 1)
+        select_daemon_display();
+    else if (debug == 1)
         select_debug_display();
     else
         select_ncurses_display();
@@ -178,14 +169,14 @@ int main(int argc, char *argv[]) {
     else
         sawa_init();
 
+    if (thread_pool_init()) return 1;
+    
     // Currently not working
     if (daemon) {
         start_as_daemon();
         return 0;
     }
     
-    if (thread_pool_init()) return 1;
-
     sawa_server_start();
     
     return 0;

@@ -137,3 +137,23 @@ void select_debug_display() {
     screen.refresh = debug_refresh;
     screen.status = debug_status;
 }
+
+///////////////////////////////////////////////////////////////////
+
+void daemon_init() { }
+void daemon_new_thread(struct connection_thread *thread_info) { }
+void daemon_print(char *format, ...) { }
+void daemon_cleanup() { }
+void daemon_refresh() { }
+void daemon_thread_update(struct connection_thread *thread_info) { }
+void daemon_status(struct connection_thread *thread_info, int is_on) { }
+
+void select_daemon_display() {
+    screen.init = daemon_init;
+    screen.new_thread = daemon_new_thread;
+    screen.update = daemon_thread_update;
+    screen.cleanup = daemon_cleanup;
+    screen.debug = daemon_print;
+    screen.refresh = daemon_refresh;
+    screen.status = daemon_status;
+}

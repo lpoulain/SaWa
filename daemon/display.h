@@ -1,5 +1,6 @@
 void select_ncurses_display();
 void select_debug_display();
+void select_daemon_display();
 
 struct connection_thread;
 
