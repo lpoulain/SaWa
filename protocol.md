@@ -18,7 +18,7 @@ This allows to know how many sectors does the filesystem contain. The message is
 
 ## Read
 
-Asks to get [size] bytes of data starting at [offset]. The query message is always 9 bytes (hence a size of 0x09 00 00 00).
+Asks to get [size] bytes of data starting at [offset]. The query message is always 13 bytes (hence a size of 0x09 00 00 00).
 
 - Query: [0x09 00 00 00] [0x02] [4-bytes message offset] [4-bytes message size]
 - Response: either a one-byte error code, or the data
