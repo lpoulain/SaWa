@@ -23,3 +23,4 @@ Here is the data workflow:
 - `main.c` / `blockdev_transfer()`: this function is passed the operation type (read or write), the first sector to read/write, how many sectors as well as a memory buffer which either contains the data to write to the device or contains the location where the driver should copy the data which has to be read.
 - `sawa.c` / `sawa_read_data()` and `sawa_write_data()`: those two functions craft a TCP/IP message to send to the SaWa server.
 - `tcp.c` / `tcp_client_send()` and `tcp_client_receive()`: those two functions are used to respectively send and receive a message to and from the SaWa server using TCP/IP.
+- The block drivers opens a new TCP connection for any message. This is because Linux automatically closes the connection very quickly anyway.

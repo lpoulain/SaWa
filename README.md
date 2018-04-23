@@ -56,3 +56,9 @@ To uninstall the driver:
 
     ./server/sawad -http
     ./server/sawad -http -debug
+
+## Architecture
+
+- [Block Driver architecture](./block_driver.md)
+- [SaWa Server architecture](./server.md)
+- [The client/server TCP protocol](./protocol.md)
