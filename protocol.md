@@ -11,7 +11,7 @@ The integers are all unsigned 32-bits, stored with the machine's default Endian 
 
 ## Info
 
-This allows to know how many sectors does the filesystem contain. The message is 
+This allows to know how many sectors does the filesystem contain. The message is always 5 bytes long.
 
 - Query: [0x01 00 00 00] [0x01]
 - Response: [4-bytes message size]
