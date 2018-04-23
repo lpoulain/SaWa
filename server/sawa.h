@@ -3,6 +3,10 @@
 #define SAWA_WRITE 0x03
 #define SAWA_STOP  0x04
 
+#define SAWA_MSG_OK     0x42
+#define SAWA_MSG_ERR    0x43
+#define SAWA_MSG_NOAUTH 0x44
+
 struct connection_thread;
 
 extern void HTTP_init();

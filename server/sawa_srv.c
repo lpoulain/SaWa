@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <errno.h>
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
@@ -34,12 +35,28 @@ void send_info(int socket_fd) {
     screen.debug("INFO sent\n");
 }
 
+// Checks that the bound .
+// If not, sends an SAWA_MSG_ERR error
+int check_valid_request(int socket_fd, unsigned int offset, unsigned int size) {
+    char response;
+    
+    if (size + offset <= nb_sectors * 512) return 1;
+    
+    response = SAWA_MSG_NOAUTH;
+    write(socket_fd, &response, 1);
+    return 0;
+}
+
 void read_file(int socket_fd, unsigned int offset, unsigned int size) {
     screen.debug("[%d] Read %d bytes (0x%x) starting at offset %d\n", socket_fd, size, size, offset);
-    if (size + offset > nb_sectors * 512) size = nb_sectors * 512 - offset;
+    
+    // Check that the request is valid
+    if (!check_valid_request(socket_fd, offset, size)) return;
+    
     lseek(fd, offset, SEEK_SET);
     unsigned char *buffer = malloc(size);
     read(fd, buffer, size);
+    
     screen.debug("[%d] Sending data...\n", socket_fd);
 //    dump_mem(buffer, 32);
     write(socket_fd, buffer, size);
@@ -48,12 +65,27 @@ void read_file(int socket_fd, unsigned int offset, unsigned int size) {
 }
 
 void write_file(int socket_fd, unsigned char *addr, unsigned int offset, unsigned int size) {
+    char response = SAWA_MSG_OK;
     screen.debug("[%d] Write %d bytes starting at offset %d\n", socket_fd, size, offset);
+
+    // Check that the request is valid
+    if (!check_valid_request(socket_fd, offset, size)) return;
+    
 //    dump_mem(addr, 32);
-    lseek(fd, offset, SEEK_SET);
-    write(fd, addr, (ssize_t)size);
-    sync();
-    screen.debug("[%d]... done\n", socket_fd);
+    if (lseek(fd, offset, SEEK_SET) >= 0) {
+        if (write(fd, addr, (ssize_t)size) >= 0) {
+            sync();
+            
+            // Sends OK message
+            write(socket_fd, &response, 1);
+            screen.debug("[%d]... done\n", socket_fd);
+            return;
+        }
+    }
+    
+    response = SAWA_MSG_ERR;
+    write(socket_fd, &response, 1);
+    screen.debug("[%d]... Error %d\n", socket_fd, errno);
 }
 
 void process_request(int socket_fd, struct connection_thread *thread_info, unsigned char *addr, unsigned int size) {

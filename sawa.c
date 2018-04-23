@@ -28,6 +28,10 @@
 #define SAWA_READ  0x02
 #define SAWA_WRITE 0x03
 
+#define SAWA_MSG_OK     0x42
+#define SAWA_MSG_ERR    0x43
+#define SAWA_MSG_NOAUTH 0x44
+
 unsigned int nb_sectors;
 
 void dump_mem(unsigned char *addr, int size) {
@@ -89,6 +93,19 @@ int sawa_send_info(void) {
     return 0;
 }
 
+void sawa_handle_error(int errno) {
+    switch(errno) {
+        case SAWA_MSG_ERR:
+            printk(KERN_INFO "SaWa: failure to read (Error)\n");
+            break;
+        case SAWA_MSG_NOAUTH:
+            printk(KERN_INFO "SaWa: failure to read (Unauthorized)\n");
+            break;
+        default:
+            printk(KERN_INFO "SaWa: failure to read (unknown response code %x)\n", errno);
+    }
+}
+
 int sawa_write_data(sector_t sector, unsigned long nb_sectors, unsigned char *buffer) {
     struct socket *conn_socket;
     unsigned int offset = sector * 512;
@@ -96,6 +113,7 @@ int sawa_write_data(sector_t sector, unsigned long nb_sectors, unsigned char *bu
     unsigned char *buffer_out = (unsigned char *)kmalloc(1 + sizeof(int)*2 + payload_size, GFP_KERNEL);
     int *int_ptr = (int*)(buffer_out);
     int buffer_start = 1 + 2*sizeof(int);
+//    char response = SAWA_MSG_ERR;
     
     if (tcp_client_connect(&conn_socket) < 0) {
         printk(KERN_INFO "SaWa: could not connect\n");
@@ -110,10 +128,19 @@ int sawa_write_data(sector_t sector, unsigned long nb_sectors, unsigned char *bu
     
     memcpy(buffer_out+buffer_start, buffer, payload_size);
     
-    tcp_client_send(conn_socket, (const char *)buffer_out, buffer_start + payload_size, MSG_WAITALL);    
-    
+    tcp_client_send(conn_socket, (const char *)buffer_out, buffer_start + payload_size, MSG_WAITALL);
+    // Trying to read the error code doesn't work yet in kernel mode
+    // Unclear why
+//    tcp_client_receive(conn_socket, (unsigned char *)&response, MSG_DONTWAIT, 1);
+
     kfree(buffer_out);
     sock_release(conn_socket);
+    
+/*    if (response != SAWA_MSG_OK) {
+        sawa_handle_error(response);
+        return -1;
+    }
+  */  
     printk(KERN_INFO "SaWa: Wrote %lu sectors\n", nb_sectors); 
     return 0;
 }
@@ -124,6 +151,7 @@ int sawa_read_data(sector_t sector, unsigned long nb_sectors, unsigned char *buf
     unsigned int offset = sector * 512;
     unsigned int payload_size = nb_sectors * 512;
     int *int_ptr = (int*)(&buffer_out);
+    int n;
     memset(buffer_out, 0xFF, 13);
 
     if (tcp_client_connect(&conn_socket) < 0) {
@@ -139,9 +167,15 @@ int sawa_read_data(sector_t sector, unsigned long nb_sectors, unsigned char *buf
     *int_ptr = payload_size;
 
     tcp_client_send(conn_socket, (const char *)&buffer_out, sizeof(int)*3 + 1, MSG_WAITALL);
-    tcp_client_receive(conn_socket, (unsigned char *)buffer_in, MSG_DONTWAIT, payload_size);
+    n = tcp_client_receive(conn_socket, (unsigned char *)buffer_in, MSG_DONTWAIT, payload_size);
     
     sock_release(conn_socket);
-    printk(KERN_INFO "SaWa: Read %lu sectors\n", nb_sectors);    
-    return 0;
+    
+    if (n > 1) {
+        printk(KERN_INFO "SaWa: Read %lu sectors\n", nb_sectors);
+        return 0;
+    }
+    
+    sawa_handle_error(buffer_in[0]);
+    return -1;
 }

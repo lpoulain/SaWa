@@ -51,15 +51,15 @@ static struct block_device_operations fops =
 static struct request_queue *the_queue = NULL;
 static struct request *current_req = NULL;
 
-static void blockdev_transfer(sector_t sector,
+static int blockdev_transfer(sector_t sector,
 		unsigned long nsect, char *buffer, int write) {
 //    printk(KERN_INFO "SaWa: Request for %lu sectors starting at sector #%lu (write=%d)\n", nsect, sector, write);
     
     if (write == 0) {
-        sawa_read_data(sector, nsect, buffer);
+        return sawa_read_data(sector, nsect, buffer);
     }
     else  {
-        sawa_write_data(sector, nsect, buffer);
+        return sawa_write_data(sector, nsect, buffer);
     }
 }
 
@@ -87,15 +87,16 @@ static int set_next_request(void)
 
 static void work_handler(struct work_struct *work) {
     unsigned long saved_flags;
+    int ret;
     
     while (1) {
-        blockdev_transfer(blk_rq_pos(current_req), blk_rq_cur_sectors(current_req),
+        ret = blockdev_transfer(blk_rq_pos(current_req), blk_rq_cur_sectors(current_req),
                     current_req->buffer, rq_data_dir(current_req));
 
         spin_lock_irqsave(&sawa_dev.lock, saved_flags);
             // After __blk_end_request_cur(), the next request
             // might be on the same object
-            if (!__blk_end_request_cur(current_req, 0)) set_next_request();
+            if (!__blk_end_request_cur(current_req, ret)) set_next_request();
         spin_unlock_irqrestore(&sawa_dev.lock, saved_flags);
         if (current_req == NULL) return;
     }

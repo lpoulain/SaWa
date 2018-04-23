@@ -43,30 +43,11 @@ void dump_mem(unsigned char *addr, int size) {
     }
 }
 
-void read_result(int socket_fd, int expected_size, int debug, unsigned char *buffer_in) {
-    int n, size=0;
-    
-    for (;;) {
-//        printf("Before reading...\n");
-        n = read(socket_fd, buffer_in + size, 1024);
-//        if (debug)
-//            printf("[%d] 0x%02x %02x %02x %02x\n", n, buffer_in[0], buffer_in[1], buffer_in[2], buffer_in[3]);
-        if (n <= 0) {
-            if (size > 0) dump_mem(buffer_in, size);
-            return;
-        }
-        size += n;
-        if (size == expected_size) {
-            dump_mem(buffer_in, size);
-            return;
-        }
-//        printf("0x%02x (%d bytes)\n", buffer_in[0], n);
-    }    
-}
-
 unsigned char *send_read_cmd(int socket_fd, int offset, int payload_size) {
+    char response;
+    int n;
     unsigned char buffer_out[12];
-    unsigned char *buffer_in = malloc(payload_size);
+    unsigned char *buffer_in = malloc(payload_size + 1);
     int *int_ptr = (int*)(buffer_out);
 
     *int_ptr = 1 +sizeof(int)*2;
@@ -77,12 +58,27 @@ unsigned char *send_read_cmd(int socket_fd, int offset, int payload_size) {
     *int_ptr = payload_size;
 
     write(socket_fd, &buffer_out, 1 + sizeof(int)*3);
-    read_result(socket_fd, payload_size, 0, buffer_in);
-    
-    return buffer_in;
+    n = read(socket_fd, buffer_in, payload_size);
+
+    // Read result
+    if (n > 1) return buffer_in;
+
+    // If the message is just one byte long, it's an error code
+    switch(buffer_in[0]) {
+        case SAWA_MSG_ERR:
+            printf("Error!\n");
+            break;
+        case SAWA_MSG_NOAUTH:
+            printf("Not authorized!\n");
+            break;
+        default:
+            printf("Unknown return code: %x\n", buffer_in[0]);
+    }
+    return NULL;
 }
 
-void send_write_cmd_random(int socket_fd, int offset, int payload_size) {
+int send_write_cmd_random(int socket_fd, int offset, int payload_size) {
+    char response;
     unsigned char buffer_out[5000];
     int *int_ptr = (int*)(buffer_out);
     int i, buffer_start = 1 + 2*sizeof(int);
@@ -98,9 +94,13 @@ void send_write_cmd_random(int socket_fd, int offset, int payload_size) {
     }
 
     write(socket_fd, &buffer_out, payload_size + buffer_start);
+    read(socket_fd, &response, 1);
+   
+    return response;
 }
 
-void send_write_cmd(int socket_fd, int offset, int payload_size, unsigned char *payload) {
+int send_write_cmd(int socket_fd, int offset, int payload_size, unsigned char *payload) {
+    char response;
     unsigned char buffer_out[5000];
     int *int_ptr = (int*)(buffer_out);
     int i, buffer_start = 1 + 2*sizeof(int);
@@ -114,19 +114,23 @@ void send_write_cmd(int socket_fd, int offset, int payload_size, unsigned char *
     memcpy(buffer_out + buffer_start, payload, payload_size);
 
     write(socket_fd, &buffer_out, payload_size + buffer_start);
+    read(socket_fd, &response, 1);
+    
+    return response;
 }
 
 void send_info_cmd() {
     unsigned char buffer_out[12];
     int *int_ptr = (int*)(buffer_out);
-    unsigned char result[4];
+    int result;
 
     int socket_fd = sawa_client_init();
     *int_ptr = 1;
     buffer_out[sizeof(int)] = SAWA_INFO;
     
     write(socket_fd, buffer_out, 1 + sizeof(int));
-    read_result(socket_fd, sizeof(int), 1, (unsigned char*)&result);
+    read(socket_fd, (unsigned char*)&result, sizeof(int));
+    printf("Number of sectors: %d\n", result);
 }
 
 void send_stop_cmd() {
@@ -142,8 +146,23 @@ void send_stop_cmd() {
 }
 
 void sawa_send_command(int socket_fd, int op, int offset, int nb_bytes) {
-    if (op == SAWA_READ) free(send_read_cmd(socket_fd, offset, nb_bytes));
-    else if (op == SAWA_WRITE) send_write_cmd_random(socket_fd, offset, nb_bytes);
+    unsigned char *buffer;
+    int response;
+    
+    if (op == SAWA_READ) {
+        buffer = send_read_cmd(socket_fd, offset, nb_bytes);
+        if (buffer != NULL) {
+            dump_mem(buffer, nb_bytes);
+            free(buffer);
+        }
+    }
+    else if (op == SAWA_WRITE) {
+        response = send_write_cmd_random(socket_fd, offset, nb_bytes);
+
+        if (response == SAWA_MSG_OK) printf("Success!\n");
+        else if (response == SAWA_MSG_ERR) printf("Error!\n");
+        else if (response == SAWA_MSG_NOAUTH) printf("Not authorized!\n");
+    }
 }
 
 int sawa_client_init() {
