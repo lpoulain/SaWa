@@ -1,8 +1,8 @@
 # SaWa Server Architecture
 
-The SaWa Server is designed to offer the best performance possible. It is using two:
+The SaWa Server is designed with performance it mind, and uses two he best performance possible. It is using two mechanisms for this:
 
-- Using a thread pool: each new TCP connection is handled by a separate thread. The server keeps a pool of idle threads and reuses them whenever possible.
+- A thread pool: each new TCP connection is handled by a separate thread. The server keeps a pool of idle threads and reuses them whenever possible.
 - Caching (HTTP server only): Web pages which are read from the disk are kept in memory
 
 The workflow is as follows:
