@@ -1,6 +1,9 @@
 # SaWa Server Architecture
 
-The main complexity of the SaWa Server is the thread pool, or how each new TCP connection is handled by a separate thread. The server keeps a pool of idle thread and reuses them.
+The SaWa Server is designed to offer the best performance possible. It is using two:
+
+- Using a thread pool: each new TCP connection is handled by a separate thread. The server keeps a pool of idle threads and reuses them whenever possible.
+- Caching (HTTP server only): Web pages which are read from the disk are kept in memory
 
 The workflow is as follows:
 
@@ -29,3 +32,9 @@ The server has three different types of display:
 - Daemon (`sawad -daemon`): no debug information is produced (in a future version errors will be stored in a log file)
 
 The `screen` object points to a `struct display` which contains the appropriate methods.
+
+## Improvements
+
+- SaWa server cache: the server could keep a copy of the pages ready from the disk in memory, avoiding duplicate disk reads. The cache needs to be updated if a write operation is requested. It is however not clear how much performance would be gained considering Linux already has a filesystem cache. Likewise, a write cache (where the server acknowledges immediately a write operation but performs it later) is feasible but can be dangerous.
+- Logging errors in a log file
+- The ability to use the "stop" command when the server is running in HTTP server mode
