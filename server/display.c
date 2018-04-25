@@ -82,8 +82,19 @@ void display_cleanup() {
 }
 
 // No-op
-void display_debug(char *msg, ...) {
+void display_debug(char *format, ...) {
     
+}
+
+void display_error(char *format, ...) {
+    unsigned char buffer[256];
+    
+    va_list argptr;
+    va_start(argptr, format);
+    vsprintf(buffer, format, argptr);
+    va_end(argptr);
+    
+    mvaddstr(6, 0, buffer);
 }
 
 void select_ncurses_display() {
@@ -92,6 +103,7 @@ void select_ncurses_display() {
     screen.update = display_thread_update;
     screen.cleanup = display_cleanup;
     screen.debug = display_debug;
+    screen.error = display_error;
     screen.refresh = display_refresh;
     screen.status = display_status;
     
@@ -117,6 +129,13 @@ void debug_print(char *format, ...) {
     va_end(argptr);
 }
 
+void debug_error(char *format, ...) {
+    va_list argptr;
+    va_start(argptr, format);
+    vfprintf(stderr, format, argptr);
+    va_end(argptr);
+}
+
 void debug_cleanup() { }
 void debug_refresh() { }
 void debug_thread_update(struct connection_thread *thread_info) { }
@@ -134,26 +153,56 @@ void select_debug_display() {
     screen.update = debug_thread_update;
     screen.cleanup = debug_cleanup;
     screen.debug = debug_print;
+    screen.error = debug_error;
     screen.refresh = debug_refresh;
     screen.status = debug_status;
 }
 
 ///////////////////////////////////////////////////////////////////
 
-void daemon_init() { }
+static FILE *fd_log;
+
+void daemon_init() {
+    fd_log = fopen("./sawa.log", "a+");
+}
+
 void daemon_new_thread(struct connection_thread *thread_info) { }
-void daemon_print(char *format, ...) { }
-void daemon_cleanup() { }
+
+void daemon_debug(char *format, ...) {
+    if (!debug) return;
+    
+    va_list argptr;
+    va_start(argptr, format);
+    vfprintf(fd_log, format, argptr);
+    va_end(argptr);
+    
+    fflush(fd_log);
+}
+
+void daemon_cleanup() {
+    fclose(fd_log);
+}
+
 void daemon_refresh() { }
 void daemon_thread_update(struct connection_thread *thread_info) { }
 void daemon_status(struct connection_thread *thread_info, int is_on) { }
+
+void daemon_error(char *format, ...) {
+    va_list argptr;
+    va_start(argptr, format);
+    vfprintf(fd_log, format, argptr);
+    va_end(argptr);
+    
+    fflush(fd_log);
+}
 
 void select_daemon_display() {
     screen.init = daemon_init;
     screen.new_thread = daemon_new_thread;
     screen.update = daemon_thread_update;
     screen.cleanup = daemon_cleanup;
-    screen.debug = daemon_print;
+    screen.debug = daemon_debug;
+    screen.error = daemon_error;
     screen.refresh = daemon_refresh;
     screen.status = daemon_status;
 }

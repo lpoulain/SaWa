@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -226,12 +227,40 @@ void *sawa_thread_test(void *arg) {
     atomic_dec(&test_counter);
 }
 
+int timeval_subtract (result, x, y)
+     struct timeval *result, *x, *y;
+{
+  /* Perform the carry for the later subtraction by updating y. */
+  if (x->tv_usec < y->tv_usec) {
+    int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+    y->tv_usec -= 1000000 * nsec;
+    y->tv_sec += nsec;
+  }
+  if (x->tv_usec - y->tv_usec > 1000000) {
+    int nsec = (y->tv_usec - x->tv_usec) / 1000000;
+    y->tv_usec += 1000000 * nsec;
+    y->tv_sec -= nsec;
+  }
+
+  /* Compute the time remaining to wait.
+     tv_usec is certainly positive. */
+  result->tv_sec = x->tv_sec - y->tv_sec;
+  result->tv_usec = x->tv_usec - y->tv_usec;
+
+  /* Return 1 if result is negative. */
+  return x->tv_sec < y->tv_sec;
+}
+
 void sawa_test(int nb_threads) {
     pthread_t *tid = malloc(sizeof(pthread_t)*nb_threads);
     int i;
     debug = 0;
+    struct timeval starttime, endtime, timediff;
     
     if (nb_threads > 10) nb_threads = 10;
+    printf("Staring test...\n");
+    
+    gettimeofday(&starttime,0x0);
     atomic_set(&test_counter, nb_threads);
 
     for (i=0; i<nb_threads; i++) {
@@ -240,6 +269,10 @@ void sawa_test(int nb_threads) {
     
     while (atomic_read(&test_counter) > 0) {
     }
+    gettimeofday(&endtime,0x0);
+    
+    timeval_subtract(&timediff,&endtime,&starttime);
+    printf("Test completed in %d seconds and %d ms\n", timediff.tv_sec, timediff.tv_usec / 1000);
     
     free(tid);
 }

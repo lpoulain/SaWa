@@ -10,6 +10,7 @@ struct display {
     void (*update)(struct connection_thread *);
     void (*cleanup)();
     void (*debug)(char *, ...);
+    void (*error)(char *, ...);
     void (*refresh)(struct connection_thread *, int);
     void (*status)(struct connection_thread *, int);
 };

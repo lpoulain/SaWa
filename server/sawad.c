@@ -21,17 +21,13 @@ int debug = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-void error(const char *msg) {
-    printf("Error: %s\n", msg);
-}
-
 int socket_desc;
 
 void ctrl_c_handler(int s) {
     int nb_conn = thread_pool_cleanup();
     
     shutdown(socket_desc, SHUT_RDWR);
-    printf("Shutting down...(%d connections dropped)\n", nb_conn);
+    screen.debug("Shutting down...(%d connections dropped)\n", nb_conn);
     
     screen.cleanup();
     exit(0);
@@ -89,7 +85,7 @@ int sawa_server_start() {
      
     if (client_sock < 0)
     {
-        perror("accept failed");
+        screen.error("accept failed");
         return 1;
     }
      
@@ -123,11 +119,10 @@ void start_as_daemon() {
     }
 
     /* Change the current working directory */
-    if ((chdir("/")) < 0) {
-            /* Log the failure */
+/*    if ((chdir("/")) < 0) {
             exit(EXIT_FAILURE);
     }
-
+*/
     /* Close out the standard file descriptors */
     close(STDIN_FILENO);
     close(STDOUT_FILENO);

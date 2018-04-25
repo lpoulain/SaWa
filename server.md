@@ -27,14 +27,13 @@ The upside of a FILA queue is that it requires only one mutex (`idle_threads_loc
 
 The server has three different types of display:
 
-- Default (`sawad`): thread statistics are displayed in the screen using NCurses.
+- Default (`sawad`): thread statistics are displayed in the screen using NCurses. No debug information except errors.
 - Debug (`sawad -debug`): the degug information is printed to the stdio.
-- Daemon (`sawad -daemon`): no debug information is produced (in a future version errors will be stored in a log file)
+- Daemon (`sawad -daemon`): errors are stored in sawa.log. Debug information is stored there as well if started with the `-debug` flag.
 
 The `screen` object points to a `struct display` which contains the appropriate methods.
 
 ## Improvements
 
 - SaWa server cache: the server could keep a copy of the pages ready from the disk in memory, avoiding duplicate disk reads. The cache needs to be updated if a write operation is requested. It is however not clear how much performance would be gained considering Linux already has a filesystem cache. Likewise, a write cache (where the server acknowledges immediately a write operation but performs it later) is feasible but can be dangerous.
-- Logging errors in a log file
 - The ability to use the "stop" command when the server is running in HTTP server mode

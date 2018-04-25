@@ -48,30 +48,32 @@ int check_valid_request(int socket_fd, unsigned int offset, unsigned int size) {
 }
 
 void read_file(int socket_fd, unsigned int offset, unsigned int size) {
+    unsigned char *buffer;
+    
     screen.debug("[%d] Read %d bytes (0x%x) starting at offset %d\n", socket_fd, size, size, offset);
     
     // Check that the request is valid
     if (!check_valid_request(socket_fd, offset, size)) return;
-    
+
     lseek(fd, offset, SEEK_SET);
-    unsigned char *buffer = malloc(size);
+    buffer = malloc(size);
     read(fd, buffer, size);
     
     screen.debug("[%d] Sending data...\n", socket_fd);
 //    dump_mem(buffer, 32);
     write(socket_fd, buffer, size);
     screen.debug("[%d] ...%d bytes sent\n", socket_fd, size);
-    free(buffer);
+    //free(buffer);
 }
 
 void write_file(int socket_fd, unsigned char *addr, unsigned int offset, unsigned int size) {
     char response = SAWA_MSG_OK;
+    unsigned char *buffer;
     screen.debug("[%d] Write %d bytes starting at offset %d\n", socket_fd, size, offset);
 
     // Check that the request is valid
     if (!check_valid_request(socket_fd, offset, size)) return;
     
-//    dump_mem(addr, 32);
     if (lseek(fd, offset, SEEK_SET) >= 0) {
         if (write(fd, addr, (ssize_t)size) >= 0) {
             sync();
@@ -85,7 +87,7 @@ void write_file(int socket_fd, unsigned char *addr, unsigned int offset, unsigne
     
     response = SAWA_MSG_ERR;
     write(socket_fd, &response, 1);
-    screen.debug("[%d]... Error %d\n", socket_fd, errno);
+    screen.error("[%d]... Error %d\n", socket_fd, errno);
 }
 
 void process_request(int socket_fd, struct connection_thread *thread_info, unsigned char *addr, unsigned int size) {
@@ -94,7 +96,6 @@ void process_request(int socket_fd, struct connection_thread *thread_info, unsig
     
 //    dump_mem(addr, size);
     
-//    op = addr[sizeof(int)];
     op = addr[0];
     
     if (op == SAWA_INFO) {
@@ -104,7 +105,6 @@ void process_request(int socket_fd, struct connection_thread *thread_info, unsig
         return;
     }
     
-//    offset = *((unsigned int*)(addr+1+sizeof(int)));
     offset = *((unsigned int*)(addr+1));
 
     switch(op) {
@@ -175,7 +175,7 @@ int get_fs_file() {
 
 void sawa_init() {
     fd = get_fs_file();
-
+    
     op_listen = sawa_listen;
     server_port = 5000;
 }
