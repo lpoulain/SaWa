@@ -19,7 +19,7 @@ The workflow is as follows:
 
 The thread pool is composed of a FILA (First In, Last Out) queue `idle_threads`. It contains a linked list of `struct connection_thread` objects, each object containing information about the thread (id, socket id, thread statistics). Any modification of that queue must first acquire the `idle_threads_lock` mutex.
 
-I toyed with the idea of having a FIFO queue where the oldest idle thread gets picked up first. This would allow to have two independent mutex - one to add a thread to the queue and one to remove a thread from the queue. This would allow to add a thread to the idle queue while another thread is being removed from it. The problem is when the idle queue contains one or less threads. In order not to mess with the linked list, one function would need to hold both mutexes, which .
+I toyed with the idea of having a FIFO queue where the oldest idle thread gets picked up first. This would allow to have two independent mutex - one to add a thread to the queue and one to remove a thread from the queue. This would allow to add a thread to the idle queue while another thread is being removed from it. The problem is when the idle queue contains one or less threads. In order not to mess the status of the linked list, any thread would need to hold both mutexes, which undermines the whole concept of two independent locks.
 
 The upside of a FILA queue is that it requires only one mutex (`idle_threads_lock`), and adding/removing a `struct connection_thread` to the queue is fairly quick.
 
