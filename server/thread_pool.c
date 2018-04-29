@@ -31,17 +31,9 @@ void release_thread(struct connection_thread *thread_info);
 void *connection_handler(void *ti)
 {
     struct connection_thread *thread_info = (struct connection_thread *)ti;
-    int nSig;
+    op_listen(thread_info);
+    close(thread_info->client_sock);
 
-    while (1) {
-        op_listen(thread_info);
-        close(thread_info->client_sock);
-        release_thread(thread_info);
-        
-        sigwait(&fSigSet, &nSig);
-        screen.status(thread_info, 1);
-    }
-     
     return 0;
 }
 
@@ -68,12 +60,6 @@ struct connection_thread *new_thread(int client_sock) {
     pthread_cond_init(&(thread_info->cv), NULL);
     pthread_mutex_init(&(thread_info->mp), NULL);
 
-    pthread_mutex_lock(&all_threads_lock);
-        thread_info->nb = thread_nb++;
-        thread_info->next = all_threads;
-        all_threads = thread_info;
-    pthread_mutex_unlock(&all_threads_lock);
-    
     if( pthread_create( &thread_info->thread, NULL, connection_handler, (void*)thread_info) < 0)
     {
         perror("could not create thread");
@@ -123,10 +109,7 @@ struct connection_thread *reuse_thread(int client_sock) {
 
 ////////////////////////////////////////////////////////
 void handle_new_connection(int client_sock) {
-    // Try to reuse an idle thread
-    struct connection_thread *thread_info = reuse_thread(client_sock);
-    // If there is no idle thread, create a new one
-    if (thread_info == NULL) new_thread(client_sock);
+    new_thread(client_sock);
 }
 
 ////////////////////////////////////////////////////////
