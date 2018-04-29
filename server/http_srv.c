@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <search.h>
 #include "sawa.h"
+#include "display.h"
 #include "thread_pool.h"
 
 const char *HTTP_200 = "HTTP/1.1 200 OK\nKeep-Alive: timeout=15, max=95\nConnection: Keep-Alive\n";
@@ -137,7 +138,7 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     keep_alive = strncasestr(buffer_in, "Connection: Keep-Alive", request_message_len);
     
     // Analysis over. Processing the request
-    if (debug) printf("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
+    screen.debug("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
     
 //    if (keep_alive) printf("{%s}\n", buffer_in);
 
@@ -186,7 +187,7 @@ void HTTP_listen(struct connection_thread *thread_info) {
             free(top_msg);
             return;
         }
-        if (debug) printf("[Socket %d] %d bytes request\n", socket_fd, n);
+        screen.debug("[Socket %d] %d bytes request\n", socket_fd, n);
         
         // If this is the end of the message, send it
         if (n < request_message_len || strcmp((char*)msg + request_message_len - 4, "\r\n\r\n")) {

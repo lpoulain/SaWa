@@ -38,13 +38,8 @@ void *connection_handler(void *ti)
         close(thread_info->client_sock);
         release_thread(thread_info);
         
-/*        pthread_mutex_lock(&(thread_info->mp));
-        pthread_cond_wait(&(thread_info->cv), &(thread_info->mp));
-        pthread_mutex_unlock(&(thread_info->mp));*/
-        
         sigwait(&fSigSet, &nSig);
         screen.status(thread_info, 1);
-//        screen.debug("Resumed thread %d\n", thread_info->nb);
     }
      
     return 0;
@@ -97,12 +92,9 @@ void release_thread(struct connection_thread *thread_info) {
     pthread_mutex_lock(&idle_threads_lock);
         thread_info->next = idle_threads;
         idle_threads = thread_info;
-//        pthread_cond_init(&(thread_info->cv), NULL);
-//        pthread_mutex_init(&(thread_info->mp), NULL);
     pthread_mutex_unlock(&idle_threads_lock);
 
     screen.status(thread_info, 0);
-//    screen.debug("Release thread %d\n", thread_info);
 }
 
 // Reuse an idle thread

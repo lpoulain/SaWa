@@ -80,6 +80,7 @@ int sawa_server_start() {
      
     while( (client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
     {
+        screen.debug("[Socket %d] New request\n", client_sock);
         handle_new_connection(client_sock);
     }
      

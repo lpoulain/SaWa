@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <time.h>
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
@@ -114,6 +115,18 @@ void select_ncurses_display() {
 
 ///////////////////////////////////////////////////////////////////
 
+void print_time() {
+    time_t timer;
+    char buffer[27];
+    struct tm* tm_info;
+
+    time(&timer);
+    tm_info = localtime(&timer);
+
+    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S ", tm_info);
+    printf("%s", buffer);  
+}
+
 void debug_init() {
     printf("Server started on port %d\n", server_port);
 }
@@ -123,9 +136,16 @@ void debug_new_thread(struct connection_thread *thread_info) {
 }
 
 void debug_print(char *format, ...) {
+    struct timeval tv;
+    int sec, msec;
+    gettimeofday(&tv, NULL);
+    sec = tv.tv_sec;
+    msec = tv.tv_usec / 1000;
+    printf("[%03d] ", msec);
+    
     va_list argptr;
     va_start(argptr, format);
-    vfprintf(stderr, format, argptr);
+    vfprintf(stdout, format, argptr);
     va_end(argptr);
 }
 
@@ -141,10 +161,16 @@ void debug_refresh() { }
 void debug_thread_update(struct connection_thread *thread_info) { }
 
 void debug_status(struct connection_thread *thread_info, int is_on) {
+    struct timeval tv;
+    int sec, msec;
+    gettimeofday(&tv, NULL);
+    sec = tv.tv_sec;
+    msec = tv.tv_usec / 1000;
+    
     if (is_on)
-        printf("Resumed thread %d\n", thread_info->nb);
+        printf("[%03d] Resumed thread %d\n", msec, thread_info->nb);
     else
-        printf("Release thread %d\n", thread_info->nb);
+        printf("[%03d] Release thread %d\n", msec, thread_info->nb);
 }
 
 void select_debug_display() {
