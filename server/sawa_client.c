@@ -272,7 +272,7 @@ void sawa_test(int nb_threads) {
     gettimeofday(&endtime,0x0);
     
     timeval_subtract(&timediff,&endtime,&starttime);
-    printf("Test completed in %d seconds and %d ms\n", timediff.tv_sec, timediff.tv_usec / 1000);
+    printf("Test completed in %d seconds and %d ms\n", (int)timediff.tv_sec, (int)timediff.tv_usec / 1000);
     
     free(tid);
 }
