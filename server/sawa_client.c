@@ -9,6 +9,7 @@
 #include "sawa.h"
 
 int server_port = 5000;
+int admin_port = 5001;
 int debug=1;
 
 typedef struct {
@@ -125,7 +126,7 @@ void send_info_cmd() {
     int *int_ptr = (int*)(buffer_out);
     int result;
 
-    int socket_fd = sawa_client_init();
+    int socket_fd = sawa_client_init(server_port);
     *int_ptr = 1;
     buffer_out[sizeof(int)] = SAWA_INFO;
     
@@ -139,7 +140,7 @@ void send_stop_cmd() {
     int *int_ptr = (int*)(buffer_out);
     unsigned char result[4];
 
-    int socket_fd = sawa_client_init();
+    int socket_fd = sawa_client_init(admin_port);
     *int_ptr = 1;
     buffer_out[sizeof(int)] = SAWA_STOP;
     
@@ -166,7 +167,7 @@ void sawa_send_command(int socket_fd, int op, int offset, int nb_bytes) {
     }
 }
 
-int sawa_client_init() {
+int sawa_client_init(int port) {
     struct sockaddr_in server_addr;
     int socket_fd;
     
@@ -179,10 +180,10 @@ int sawa_client_init() {
         printf("\n inet_pton error occured\n");
         exit(1);
     } 
-    server_addr.sin_port = htons(server_port);
+    server_addr.sin_port = htons(port);
     
     if (connect(socket_fd, (struct sockaddr *)&server_addr,sizeof(server_addr)) < 0) {
-        printf("Could not connect to port 5000\n");
+        printf("Could not connect to port %d\n", port);
         exit(1);
     }
     
@@ -200,7 +201,7 @@ void *sawa_thread_test(void *arg) {
     long thread_id = (long)arg;
     int socket_fd;
 
-    socket_fd = sawa_client_init();
+    socket_fd = sawa_client_init(server_port);
     
     sawa_send_command(socket_fd, SAWA_INFO, 0, 0);
     
@@ -339,7 +340,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Operation %d, offset %d, size: %d\n", op, offset, size);
-    socket_fd = sawa_client_init();
+    socket_fd = sawa_client_init(server_port);
     sawa_send_command(socket_fd, op, offset, size);
     
     return 0;

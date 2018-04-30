@@ -2,7 +2,7 @@
 
 SaWa is networking filesystem on Linux. It is composed of two pieces:
 
-- A file server running in userspace which is accessible through TCP port 5000
+- A file server running in userspace which is accessible through TCP port 5000 (port 5001 for administrative commands)
 - A block driver, which acts as the client and talks to the server through TCP/IP
 
 ## The file server

@@ -18,6 +18,7 @@
 
 int server_port = 5000;
 int debug = 0;
+int sawa_start_admin_interface();
 
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -132,6 +133,7 @@ void start_as_daemon() {
     /* Daemon-specific initialization goes here */
 
     /* The Big Loop */
+    sawa_start_admin_interface();
     sawa_server_start();
     exit(EXIT_SUCCESS);
 }
@@ -173,6 +175,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
     
+    sawa_start_admin_interface();
     sawa_server_start();
     
     return 0;

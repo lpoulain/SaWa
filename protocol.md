@@ -34,7 +34,7 @@ Asks to write a certain number of bytes of data starting at [offset]. The number
 
 ## Stop
 
-This instructs the SaWa Server to shut down. This command is useful when the server is in daemon mode.
+This instructs the Server to shut down. This command needs to be sent to port 5001 (which is open whether the server is in SaWa or HTTP mode). This command is useful when the server started as a daemon.
 
 - Request: [0x01 00 00 00] [0x04]
 - Response: n/a

@@ -33,8 +33,11 @@ The server has three different types of display:
 
 The `screen` object points to a `struct display` which contains the appropriate methods.
 
+## Administrative interface
+
+Whether the server is started as a SaWa or an HTTP server, it also opens TCP port 5001 to process incoming administrative commands (right now only the "stop" commands, but more to follow). A dedicated thread is handling these commands.
+
 ## Improvements
 
 - SaWa server cache: the server could keep a copy of the pages ready from the disk in memory, avoiding duplicate disk reads. The cache needs to be updated if a write operation is requested. It is however not clear how much performance would be gained considering Linux already has a filesystem cache. Likewise, a write cache (where the server acknowledges immediately a write operation but performs it later) is feasible but can be dangerous.
-- The ability to use the "stop" command when the server is running in HTTP server mode
 - A branch "thread_on_demand" was created to test an architecture without a thread pool, i.e. threads are created for any new connection and destroyed when it is closed. The performance is very close to the version from the master branch using a thread pool. This is because, even though Linux does not really have threads (these are processes that share the parent's address space), these are spawn creally quickly.

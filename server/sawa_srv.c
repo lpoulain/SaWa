@@ -120,9 +120,6 @@ void process_request(int socket_fd, struct connection_thread *thread_info, unsig
             thread_info->info[2]++;
             screen.refresh(thread_info, 2);
             break;
-        case SAWA_STOP:
-            ctrl_c_handler();
-            exit(0);
     }
 }
 

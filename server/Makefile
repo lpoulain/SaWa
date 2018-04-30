@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-I.
 DEPS = 
-SAWAD_OBJ = sawad.o http_srv.o sawa_srv.o thread_pool.o display.o
+SAWAD_OBJ = sawad.o http_srv.o sawa_srv.o thread_pool.o display.o sawa_admin.o
 SAWA_CLIENT_OBJ = sawa_client.o
 
 %.o: %.c $(DEPS)
