@@ -17,4 +17,4 @@ extern int server_port;
 extern void ctrl_c_handler();
 
 extern void (*op_listen) (struct connection_thread *);
-extern int debug;
+extern int debug_flag;

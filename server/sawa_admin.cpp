@@ -1,17 +1,23 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <fstream>
 #include <string.h>
-#include <pthread.h>
+#include <sys/stat.h>
 #include <fcntl.h>
-#include <errno.h>
+#include <search.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <errno.h>
+
 #include "display.h"
 #include "sawa.h"
 #include "thread_pool.h"
 
 #define ADMIN_PORT 5001
 int admin_socket_desc;
+
+extern void ctrl_c_handler(int s);
 
 void stat_command(int socket_fd) {
     unsigned char *buffer = get_thread_statistics();
@@ -26,7 +32,7 @@ void process_admin_command(int socket_fd, unsigned char *buffer_in, int size) {
     
     switch(op) {
         case SAWA_STOP:
-            ctrl_c_handler();
+            ctrl_c_handler(0);
             exit(0);
         case SAWA_STAT:
             stat_command(socket_fd);
@@ -48,7 +54,7 @@ void read_admin_command(int socket_fd) {
         if (expected_size > 1024) return;
 
         if (expected_size > 0) {
-            buffer_in = malloc(expected_size);
+            buffer_in = (unsigned char *)malloc(expected_size);
             n = read(socket_fd, buffer_in, expected_size);
     
             if (n < 0) {
@@ -74,7 +80,7 @@ static void *admin_connection_handler(void *dummy)
     admin_socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (admin_socket_desc == -1)
     {
-        screen.error("Could not create socket");
+        screen->error("Could not create socket");
     }
     setsockopt(admin_socket_desc, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     
@@ -87,7 +93,7 @@ static void *admin_connection_handler(void *dummy)
     if( bind(admin_socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
     {
         //print the error message
-        screen.error("bind failed. Error");
+        screen->error("bind failed. Error");
         return 0;
     }
      
@@ -98,7 +104,7 @@ static void *admin_connection_handler(void *dummy)
      
     while( (client_sock = accept(admin_socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
     {
-        screen.debug("[Socket %d] Admin request\n", client_sock);
+        screen->debug("[Socket %d] Admin request\n", client_sock);
         read_admin_command(client_sock);
     }
      
@@ -107,11 +113,11 @@ static void *admin_connection_handler(void *dummy)
 
 // Creates a dedicated thread to process administrative commands
 int sawa_start_admin_interface() {
-    pthread_t *thread = malloc(sizeof(pthread_t));
+    pthread_t *thread = (pthread_t *)malloc(sizeof(pthread_t));
     
     if( pthread_create(thread, NULL, admin_connection_handler, NULL) < 0)
     {
-        screen.error("could not create admin thread");
+        screen->error("could not create admin thread");
         return -1;
     }    
     

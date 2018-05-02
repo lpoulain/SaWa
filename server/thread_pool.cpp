@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <iostream>
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +15,8 @@
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
+
+using namespace std;
 
 static int thread_nb = 0;
 
@@ -38,7 +40,7 @@ void *connection_handler(void *ti)
         release_thread(thread_info);
         
         sigwait(&fSigSet, &nSig);
-        screen.status(thread_info, 1);
+        screen->status(thread_info, 1);
     }
      
     return 0;
@@ -57,7 +59,7 @@ struct connection_thread *all_threads = NULL;
 // There is no idle thread, so we create a new one
 struct connection_thread *new_thread(int client_sock) {
     int i;
-    struct connection_thread *thread_info = malloc(sizeof(struct connection_thread));
+    struct connection_thread *thread_info = (struct connection_thread *)malloc(sizeof(struct connection_thread));
     
     thread_info->next = NULL;
     thread_info->client_sock = client_sock;
@@ -76,11 +78,11 @@ struct connection_thread *new_thread(int client_sock) {
     
     if( pthread_create( &thread_info->thread, NULL, connection_handler, (void*)thread_info) < 0)
     {
-        perror("could not create thread");
+        screen->error("could not create thread");
         return 0;
     }    
 
-    screen.new_thread(thread_info);
+    screen->new_thread(thread_info);
     
     return thread_info;
 }
@@ -94,7 +96,7 @@ void release_thread(struct connection_thread *thread_info) {
         idle_threads = thread_info;
     pthread_mutex_unlock(&idle_threads_lock);
 
-    screen.status(thread_info, 0);
+    screen->status(thread_info, 0);
 }
 
 // Reuse an idle thread
@@ -115,7 +117,7 @@ struct connection_thread *reuse_thread(int client_sock) {
     thread_info->nb_connections++;
     
     // Wake up the thread
-    screen.update(thread_info);
+    screen->thread_update(thread_info);
     pthread_kill(thread_info->thread, SIGUSR1);
     
     return thread_info;
@@ -135,7 +137,7 @@ int thread_pool_init() {
     if (pthread_mutex_init(&idle_threads_lock, NULL) != 0 ||
         pthread_mutex_init(&all_threads_lock, NULL) != 0)
     {
-        printf("\n mutex init has failed\n");
+        cerr << "\n mutex init has failed" << endl;
         return 1;
     }
 
@@ -209,7 +211,7 @@ unsigned char *get_thread_statistics() {
     struct thread_stat *thread_st;
     
     pthread_mutex_lock(&all_threads_lock);
-        buffer_out = malloc(4 + thread_nb*sizeof(struct thread_stat));
+        buffer_out = (unsigned char *)malloc(4 + thread_nb*sizeof(struct thread_stat));
         size = (int *)buffer_out;
         *size = thread_nb * sizeof(struct thread_stat);
 

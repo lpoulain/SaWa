@@ -1,10 +1,14 @@
-#define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
+#include <fstream>
 #include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <search.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h> 
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
@@ -40,9 +44,8 @@ int strncasestr(const char *s, const char *find, const int max)
 		} while (strncasecmp(s, find, len) != 0);
 		s--;
 	}
-//    printf("Found: %lx %lx\n", (unsigned long)s, (unsigned long)s_end);
-//    printf("{{%s}}\n", s);
-	return 1;
+
+    return 1;
 }
 
 struct request_message {
@@ -79,12 +82,12 @@ struct web_file *get_file(char *path) {
     // The file exists, loads it in memory
     the_file = (struct web_file *)malloc(sizeof(struct web_file));
     the_file->size = file_size;
-    the_file->content = malloc(file_size);
+    the_file->content = (char *)malloc(file_size);
     
-    fd = open(path, O_RDONLY);
-    lseek(fd, 0, SEEK_SET);
-    read(fd, the_file->content, the_file->size);
-    close(fd);
+    std::FILE *fp = std::fopen(path, O_RDONLY);
+    std::fseek(fp, 0, SEEK_SET);
+    std::fread(the_file->content, sizeof(char), the_file->size, fp);
+    std::fclose(fp);
 
     // Then save it in the cache
     e.key = path;
@@ -111,7 +114,7 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     if (strncmp(buffer_in, "GET /", 5)) {
         write(socket_fd, HTTP_500, HTTP_500_len);
         free(buffer_in);
-        return;
+        return 0;
     }
     
     url_start = 4;
@@ -122,9 +125,9 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     url_length = url_end - url_start;
 
     if (buffer_in[url_end-1] == '/')
-        url = malloc(url_length + root_dir_len + index_html_len + 1);
+        url = (char*)malloc(url_length + root_dir_len + index_html_len + 1);
     else
-        url = malloc(url_length + root_dir_len + 1);
+        url = (char*)malloc(url_length + root_dir_len + 1);
     
     strcpy(url, root_dir);
     strncpy(url + root_dir_len, buffer_in + url_start, url_length);
@@ -138,10 +141,8 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     keep_alive = strncasestr(buffer_in, "Connection: Keep-Alive", request_message_len);
     
     // Analysis over. Processing the request
-    screen.debug("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
+    screen->debug("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
     
-//    if (keep_alive) printf("{%s}\n", buffer_in);
-
     the_file = get_file(url);
     
     // We are done reading the HTTP request, free the resource
@@ -155,11 +156,11 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     // If the file doesn't exist, return an HTTP 404 message
     if (!the_file) {
         write(socket_fd, HTTP_404, HTTP_404_len);
-        return;
+        return 0;
     }
     
     // Otherwise, write the HTTP headers
-    buffer_out = malloc(200);
+    buffer_out = (char*)malloc(200);
     sprintf(buffer_out, "%sContent-Length: %d\nContent-Type: text/html;\n\n", HTTP_200, the_file->size);
     header_size = strlen(buffer_out);
     
@@ -187,7 +188,7 @@ void HTTP_listen(struct connection_thread *thread_info) {
             free(top_msg);
             return;
         }
-        screen.debug("[Socket %d] %d bytes request\n", socket_fd, n);
+        screen->debug("[Socket %d] %d bytes request\n", socket_fd, n);
         
         // If this is the end of the message, send it
         if (n < request_message_len || strcmp((char*)msg + request_message_len - 4, "\r\n\r\n")) {

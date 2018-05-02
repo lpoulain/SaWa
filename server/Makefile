@@ -13,7 +13,7 @@ sawa-client: $(SAWA_CLIENT_OBJ)
 	gcc -pthread -o $@ $^ $(CFLAGS)
 
 sawad: $(SAWAD_OBJ)
-	gcc -pthread -o $@ $^ $(CFLAGS) -lncurses
+	g++ -pthread -std=c++11 -o $@ $^ $(CFLAGS) -lncurses
 
 clean:
 	rm *.o

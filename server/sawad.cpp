@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <iostream>
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,8 +16,10 @@
 #include "thread_pool.h"
 #include "display.h"
 
+using namespace std;
+
 int server_port = 5000;
-int debug = 0;
+int debug_flag = 0;
 int sawa_start_admin_interface();
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -28,9 +30,10 @@ void ctrl_c_handler(int s) {
     int nb_conn = thread_pool_cleanup();
     
     shutdown(socket_desc, SHUT_RDWR);
-    screen.debug("Shutting down...(%d connections dropped)\n", nb_conn);
+    screen->debug("Shutting down...(%d connections dropped)\n", nb_conn);
     
-    screen.cleanup();
+    screen->cleanup();
+    delete screen;
     exit(0);
 }
 
@@ -54,7 +57,7 @@ int sawa_server_start() {
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
     {
-        printf("Could not create socket");
+        cerr << "Could not create socket" << endl;
     }
     setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     
@@ -67,7 +70,7 @@ int sawa_server_start() {
     if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
     {
         //print the error message
-        perror("bind failed. Error");
+        cerr << "bind failed. Error" << endl;
         return 1;
     }
      
@@ -75,19 +78,19 @@ int sawa_server_start() {
     c = listen(socket_desc , 3);
      
     //Accept and incoming connection
-    screen.init();
+    screen->init();
 
     c = sizeof(struct sockaddr_in);
      
     while( (client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
     {
-        screen.debug("[Socket %d] New request\n", client_sock);
+        screen->debug("[Socket %d] New request\n", client_sock);
         handle_new_connection(client_sock);
     }
      
     if (client_sock < 0)
     {
-        screen.error("accept failed");
+        screen->error("accept failed");
         return 1;
     }
      
@@ -147,9 +150,9 @@ int main(int argc, char *argv[]) {
 
     for (i=1; i<argc; i++) {
         if (!strcmp(argv[i], "-daemon")) daemon = 1;
-        if (!strcmp(argv[i], "-debug")) debug = 1;
+        if (!strcmp(argv[i], "-debug")) debug_flag = 1;
         if (!strcmp(argv[i], "-help")) {
-            printf("Usage: %s [-deamon] [-http]\n", argv[0]);
+            cout << "Usage: " << argv[0] << " [-deamon] [-http]\n" << endl;
             return 0;
         }
         if (!strcmp(argv[i], "-http")) http = 1;
@@ -157,7 +160,7 @@ int main(int argc, char *argv[]) {
 
     if (daemon == 1)
         select_daemon_display();
-    else if (debug == 1)
+    else if (debug_flag == 1)
         select_debug_display();
     else
         select_ncurses_display();
