@@ -15,9 +15,9 @@ using namespace std;
 
 Display *screen;
 
-static const char *info_label[3];
-
 class DisplayDefault : public Display {
+    const char *info_label[3];
+    
 public:    
     void init() {
         char buffer[32];
