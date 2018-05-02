@@ -16,6 +16,12 @@ typedef struct {
 	volatile int counter;
 } atomic_t;
 
+struct thread_stat {
+    int nb_connections;
+    int info[3];
+    char active;
+};
+
 //#define ATOMIC_INIT(i)	{ (i) }
 
 #define atomic_read(v) ((v)->counter)
@@ -145,6 +151,43 @@ void send_stop_cmd() {
     buffer_out[sizeof(int)] = SAWA_STOP;
     
     write(socket_fd, buffer_out, 1 + sizeof(int));
+}
+
+void send_stat_cmd() {
+    unsigned char buffer_out[12];
+    unsigned char *buffer_in;
+    int size, nb_threads, i;
+    int *int_ptr = (int*)(buffer_out);
+    unsigned char result[4];
+    struct thread_stat *thread_stats;
+
+    int socket_fd = sawa_client_init(admin_port);
+    *int_ptr = 1;
+    buffer_out[sizeof(int)] = SAWA_STAT;
+    
+    write(socket_fd, buffer_out, 1 + sizeof(int));
+    
+    read(socket_fd, &size, 4);
+    nb_threads = size / sizeof(struct thread_stat);
+    
+    printf("There are %d threads\n", nb_threads);
+    printf("Thread# Active? #Conn   Info    Reads   Writes\n");
+    buffer_in = malloc(size);
+    thread_stats = (struct thread_stat *)buffer_in;
+
+    read(socket_fd, buffer_in, size);
+    
+    for (i=0; i<nb_threads; i++) {
+        printf("%d\t%d\t%d\t%d\t%d\t%d\n",
+               i,
+               thread_stats[i].active,
+               thread_stats[i].nb_connections,
+               thread_stats[i].info[0],
+               thread_stats[i].info[1],
+               thread_stats[i].info[2]);
+    }
+    
+    free(buffer_in);
 }
 
 void sawa_send_command(int socket_fd, int op, int offset, int nb_bytes) {
@@ -308,7 +351,12 @@ int main(int argc, char *argv[]) {
         send_stop_cmd();
         return 0;
     }
-    
+
+    if (!strcmp(argv[1], "stat")) {
+        send_stat_cmd();
+        return 0;
+    }
+
     if (!strcmp(argv[1], "test")) {
 //        if (argc >= 3) nb_requests = atoi(argv[2]); else nb_requests = 2000;
         if (argc >= 3) nb_threads = atoi(argv[2]);

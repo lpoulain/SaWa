@@ -24,6 +24,7 @@ To test the fileserver, `sawa-client` is also provided:
     $ ./server/sawa-client read 10 100
     $ ./server/sawa-client test 3
     $ ./server/sawa-client stop
+    $ ./server/sawa-client stat
 
 ## The device driver
 

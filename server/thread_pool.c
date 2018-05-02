@@ -18,7 +18,6 @@
 
 static int thread_nb = 0;
 
-
 void (*op_listen) (struct connection_thread *);
 sigset_t fSigSet;
 
@@ -71,6 +70,7 @@ struct connection_thread *new_thread(int client_sock) {
     pthread_mutex_lock(&all_threads_lock);
         thread_info->nb = thread_nb++;
         thread_info->next = all_threads;
+        thread_info->next_all = all_threads;
         all_threads = thread_info;
     pthread_mutex_unlock(&all_threads_lock);
     
@@ -169,4 +169,52 @@ int thread_pool_cleanup() {
     }
     
     return nb_conn;
+}
+
+////////////////////////////////////////////////////////////
+// Thread serialization
+////////////////////////////////////////////////////////////
+
+int get_nb_threads() {
+    int nb_threads = 0;
+    struct connection_thread *thread_info = all_threads;
+
+    while (thread_info != NULL) {
+        nb_threads++;
+        thread_info = thread_info->next;
+    }
+
+    return nb_threads;
+}
+
+void serialize_thread_stats(unsigned char *buffer) {
+    struct thread_stat *thread_st = (struct thread_stat *)buffer + thread_nb - 1;
+    struct connection_thread *thread_info = all_threads;
+    int i;
+    
+    while (thread_info != NULL) {
+        thread_st->nb_connections = thread_info->nb_connections;
+        for (i=0; i<3; i++)
+            thread_st->info[i] = thread_info->info[i];
+        thread_st->active = (thread_info->client_sock >= 0);
+        thread_st--;
+        thread_info = thread_info->next_all;
+    }
+}
+
+unsigned char *get_thread_statistics() {
+    int *size;
+    unsigned char *buffer_out;
+    struct connection_thread *thread_info;
+    struct thread_stat *thread_st;
+    
+    pthread_mutex_lock(&all_threads_lock);
+        buffer_out = malloc(4 + thread_nb*sizeof(struct thread_stat));
+        size = (int *)buffer_out;
+        *size = thread_nb * sizeof(struct thread_stat);
+
+        serialize_thread_stats(buffer_out + 4);
+    pthread_mutex_unlock(&all_threads_lock);
+    
+    return buffer_out;
 }

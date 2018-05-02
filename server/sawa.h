@@ -2,6 +2,7 @@
 #define SAWA_READ  0x02
 #define SAWA_WRITE 0x03
 #define SAWA_STOP  0x04
+#define SAWA_STAT  0x05
 
 #define SAWA_MSG_OK     0x42
 #define SAWA_MSG_ERR    0x43

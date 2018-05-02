@@ -8,9 +8,18 @@
 #include <netinet/in.h>
 #include "display.h"
 #include "sawa.h"
+#include "thread_pool.h"
 
 #define ADMIN_PORT 5001
 int admin_socket_desc;
+
+void stat_command(int socket_fd) {
+    unsigned char *buffer = get_thread_statistics();
+    int *buffer_size = (int*)buffer;
+    
+    write(socket_fd, buffer, *buffer_size);
+    free(buffer);
+}
 
 void process_admin_command(int socket_fd, unsigned char *buffer_in, int size) {
     unsigned char op = buffer_in[0];
@@ -19,6 +28,9 @@ void process_admin_command(int socket_fd, unsigned char *buffer_in, int size) {
         case SAWA_STOP:
             ctrl_c_handler();
             exit(0);
+        case SAWA_STAT:
+            stat_command(socket_fd);
+            break;
         default:
             break;
     }
