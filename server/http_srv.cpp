@@ -1,17 +1,20 @@
+#include <iostream>
 #include <fstream>
 #include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <search.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <map>
 
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
+
+using namespace std;
 
 const char *HTTP_200 = "HTTP/1.1 200 OK\nKeep-Alive: timeout=15, max=95\nConnection: Keep-Alive\n";
 const char *HTTP_404 = "HTTP/1.1 404 Not Found\nContent-Type: text/html; charset=UTF-8\nContent-Length: 12\n\nError 404 - Not found\n\n";
@@ -23,7 +26,6 @@ int HTTP_404_len;
 int HTTP_500_len;
 int root_dir_len;
 int index_html_len;
-struct hsearch_data htab;
 
 #define request_message_len 1016
 
@@ -58,20 +60,18 @@ struct web_file {
     int size;
 };
 
+map<string, struct web_file *> cache;
+
 struct web_file *get_file(char *path) {
-    ENTRY e, *ep;
+//    ENTRY e, *ep;
     struct stat st;
     int fd, file_size, n;
     struct web_file *the_file;
     
     // Check if the file is cached. If it is, return it
-    e.key = path;
-    n = hsearch_r(e, FIND, &ep, &htab);
-    if (n) {
-        free(path);
-        return (struct web_file *)ep->data;
-    }
-  
+    the_file = cache[path];
+    if (the_file != nullptr) return the_file;
+
     // If not, find the file size
     stat(path, &st);
     file_size = st.st_size;
@@ -84,15 +84,13 @@ struct web_file *get_file(char *path) {
     the_file->size = file_size;
     the_file->content = (char *)malloc(file_size);
     
-    std::FILE *fp = std::fopen(path, O_RDONLY);
+    std::FILE *fp = std::fopen(path, "r");
     std::fseek(fp, 0, SEEK_SET);
     std::fread(the_file->content, sizeof(char), the_file->size, fp);
     std::fclose(fp);
 
     // Then save it in the cache
-    e.key = path;
-    e.data = the_file;
-    hsearch_r(e, ENTER, &ep, &htab);
+    cache[path] = the_file;
     
     return the_file;
 }
@@ -220,10 +218,7 @@ void HTTP_init() {
     HTTP_500_len = strlen(HTTP_500);
     root_dir_len = strlen(root_dir);
     index_html_len = strlen(index_html);    
-    
-    hcreate_r(100, &htab);
 }
 
 void HTTP_cleanup() {
-    hdestroy_r(&htab);
 }
