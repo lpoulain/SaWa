@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstddef>
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,15 +54,15 @@ void *connection_handler(void *ti)
 pthread_mutex_t idle_threads_lock;
 pthread_mutex_t all_threads_lock;
 
-struct connection_thread *idle_threads = NULL;
-struct connection_thread *all_threads = NULL;
+struct connection_thread *idle_threads = nullptr;
+struct connection_thread *all_threads = nullptr;
 
 // There is no idle thread, so we create a new one
 struct connection_thread *new_thread(int client_sock) {
     int i;
     struct connection_thread *thread_info = (struct connection_thread *)malloc(sizeof(struct connection_thread));
     
-    thread_info->next = NULL;
+    thread_info->next = nullptr;
     thread_info->client_sock = client_sock;
     thread_info->nb_connections = 1;
     for (i=0; i<3; i++) thread_info->info[i] = 0;
@@ -101,10 +102,10 @@ void release_thread(struct connection_thread *thread_info) {
 
 // Reuse an idle thread
 struct connection_thread *reuse_thread(int client_sock) {
-    struct connection_thread *thread_info = NULL;
+    struct connection_thread *thread_info = nullptr;
 
     // Is there any idle thread?
-    if (idle_threads == NULL) return NULL;
+    if (idle_threads == nullptr) return nullptr;
     
     // If there is, remove it from the idle queue
     pthread_mutex_lock(&idle_threads_lock);
@@ -128,7 +129,7 @@ void handle_new_connection(int client_sock) {
     // Try to reuse an idle thread
     struct connection_thread *thread_info = reuse_thread(client_sock);
     // If there is no idle thread, create a new one
-    if (thread_info == NULL) new_thread(client_sock);
+    if (thread_info == nullptr) new_thread(client_sock);
 }
 
 ////////////////////////////////////////////////////////
@@ -155,7 +156,7 @@ int thread_pool_cleanup() {
     struct connection_thread *thread_info;
     int nb_conn = 0;
 
-    while (all_threads != NULL) {
+    while (all_threads != nullptr) {
         thread_info = all_threads;
         
         pthread_detach(thread_info->thread);
@@ -181,7 +182,7 @@ int get_nb_threads() {
     int nb_threads = 0;
     struct connection_thread *thread_info = all_threads;
 
-    while (thread_info != NULL) {
+    while (thread_info != nullptr) {
         nb_threads++;
         thread_info = thread_info->next;
     }
@@ -194,7 +195,7 @@ void serialize_thread_stats(unsigned char *buffer) {
     struct connection_thread *thread_info = all_threads;
     int i;
     
-    while (thread_info != NULL) {
+    while (thread_info != nullptr) {
         thread_st->nb_connections = thread_info->nb_connections;
         for (i=0; i<3; i++)
             thread_st->info[i] = thread_info->info[i];
@@ -212,6 +213,7 @@ unsigned char *get_thread_statistics() {
     
     pthread_mutex_lock(&all_threads_lock);
         buffer_out = (unsigned char *)malloc(4 + thread_nb*sizeof(struct thread_stat));
+        memset(buffer_out, 0, 4 + thread_nb*sizeof(struct thread_stat));
         size = (int *)buffer_out;
         *size = thread_nb * sizeof(struct thread_stat);
 

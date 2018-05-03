@@ -70,7 +70,7 @@ void read_file(int socket_fd, unsigned int offset, unsigned int size) {
 //    dump_mem(buffer, 32);
     write(socket_fd, buffer, size);
     screen->debug("[%d] ...%d bytes sent\n", socket_fd, size);
-    //free(buffer);
+    free(buffer);
 }
 
 void write_file(int socket_fd, unsigned char *addr, unsigned int offset, unsigned int size) {

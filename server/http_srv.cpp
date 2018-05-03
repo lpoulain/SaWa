@@ -77,7 +77,7 @@ struct web_file *get_file(char *path) {
     file_size = st.st_size;
 
     // The file doesn't exist
-    if (file_size == 0) return NULL;
+    if (file_size == 0) return nullptr;
 
     // The file exists, loads it in memory
     the_file = (struct web_file *)malloc(sizeof(struct web_file));
@@ -147,7 +147,7 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     
     // We are done reading the HTTP request, free the resource
 //    free(url);
-    while (tmp_msg != NULL) {
+    while (tmp_msg != nullptr) {
         tmp_msg = tmp_msg->next;
         free(msg);
         msg = tmp_msg;
@@ -197,7 +197,7 @@ void HTTP_listen(struct connection_thread *thread_info) {
             
             // Otherwise be ready for another message
             top_msg = (struct request_message *)malloc(sizeof(struct request_message));
-            top_msg->next = NULL;
+            top_msg->next = nullptr;
             msg = top_msg;
         }
         

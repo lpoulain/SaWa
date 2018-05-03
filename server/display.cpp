@@ -1,6 +1,5 @@
 #define _BSD_SOURCE
 
-#include <cstddef>
 #include <curses.h>
 #include <iostream>
 #include <stdlib.h>
