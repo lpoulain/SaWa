@@ -60,10 +60,11 @@ struct web_file {
     int size;
 };
 
+// Used to cache the files read from the disk
+// It is a very simplistic cache which does not release anything *ever*
 map<string, struct web_file *> cache;
 
 struct web_file *get_file(char *path) {
-//    ENTRY e, *ep;
     struct stat st;
     int fd, file_size, n;
     struct web_file *the_file;

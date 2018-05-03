@@ -13,13 +13,13 @@
 #include "display.h"
 #include "sawa.h"
 #include "thread_pool.h"
+#include "sawa_admin.h"
 
 #define ADMIN_PORT 5001
-int admin_socket_desc;
 
 extern void ctrl_c_handler(int s);
 
-void stat_command(int socket_fd) {
+void AdminInterface::statCommand(int socket_fd) {
     unsigned char *buffer = get_thread_statistics();
     int *buffer_size = (int*)buffer;
     
@@ -27,7 +27,7 @@ void stat_command(int socket_fd) {
     free(buffer);
 }
 
-void process_admin_command(int socket_fd, unsigned char *buffer_in, int size) {
+void AdminInterface::processCommand(int socket_fd, unsigned char *buffer_in, int size) {
     unsigned char op = buffer_in[0];
     
     switch(op) {
@@ -35,14 +35,14 @@ void process_admin_command(int socket_fd, unsigned char *buffer_in, int size) {
             ctrl_c_handler(0);
             exit(0);
         case SAWA_STAT:
-            stat_command(socket_fd);
+            this->statCommand(socket_fd);
             break;
         default:
             break;
     }
 }
 
-void read_admin_command(int socket_fd) {
+void AdminInterface::readCommand(int socket_fd) {
     int n, expected_size;
     unsigned char *buffer_in;
     
@@ -62,27 +62,26 @@ void read_admin_command(int socket_fd) {
                 return;
             }
 
-            process_admin_command(socket_fd, buffer_in, expected_size);
+            this->processCommand(socket_fd, buffer_in, expected_size);
             free(buffer_in);
         }
     }
 }
 
-// Starts a TCP connection on port 5001 and listens to it
-static void *admin_connection_handler(void *dummy)
-{
+void *AdminInterface::connectionHandler(void *ptr) {
     int client_sock , c , *new_sock;
+    AdminInterface *admin = (AdminInterface*)ptr;
     struct connection *conn;
     struct sockaddr_in server , client;
     int option = 1;
      
     //Create socket
-    admin_socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-    if (admin_socket_desc == -1)
+    admin->socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+    if (admin->socket_desc == -1)
     {
         screen->error("Could not create socket");
     }
-    setsockopt(admin_socket_desc, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    setsockopt(admin->socket_desc, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     
     //Prepare the sockaddr_in structure
     server.sin_family = AF_INET;
@@ -90,7 +89,7 @@ static void *admin_connection_handler(void *dummy)
     server.sin_port = htons(ADMIN_PORT);
      
     //Bind
-    if( bind(admin_socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
+    if( bind(admin->socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
     {
         //print the error message
         screen->error("bind failed. Error");
@@ -98,28 +97,32 @@ static void *admin_connection_handler(void *dummy)
     }
      
     //Listen
-    listen(admin_socket_desc , 3);
+    listen(admin->socket_desc , 3);
 
     c = sizeof(struct sockaddr_in);
      
-    while( (client_sock = accept(admin_socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
+    while( (client_sock = accept(admin->socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
     {
         screen->debug("[Socket %d] Admin request\n", client_sock);
-        read_admin_command(client_sock);
+        admin->readCommand(client_sock);
     }
      
-    return 0;
+    return 0;    
 }
 
-// Creates a dedicated thread to process administrative commands
-int sawa_start_admin_interface() {
-    pthread_t *thread = (pthread_t *)malloc(sizeof(pthread_t));
-    
-    if( pthread_create(thread, NULL, admin_connection_handler, NULL) < 0)
+AdminInterface::AdminInterface() {
+    this->thread = (pthread_t *)malloc(sizeof(pthread_t));
+
+    if(pthread_create(thread, NULL, AdminInterface::connectionHandler, this) < 0)
     {
         screen->error("could not create admin thread");
-        return -1;
     }    
-    
-    return 0;
+
+}
+
+AdminInterface::~AdminInterface() {
+    screen->debug("Shutting down admin interface\n");
+
+    shutdown(this->socket_desc, SHUT_RDWR);
+    free(this->thread);
 }

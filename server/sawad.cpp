@@ -15,18 +15,22 @@
 #include "sawa.h"
 #include "thread_pool.h"
 #include "display.h"
+#include "sawa_admin.h"
 
 using namespace std;
 
 int server_port = 5000;
 int debug_flag = 0;
-int sawa_start_admin_interface();
+
+AdminInterface *admin;
 
 /////////////////////////////////////////////////////////////////////////////////////
 
 int socket_desc;
 
 void ctrl_c_handler(int s) {
+    delete admin;
+
     int nb_conn = thread_pool_cleanup();
     
     shutdown(socket_desc, SHUT_RDWR);
@@ -136,7 +140,8 @@ void start_as_daemon() {
     /* Daemon-specific initialization goes here */
 
     /* The Big Loop */
-    sawa_start_admin_interface();
+    //sawa_start_admin_interface();
+    admin = new AdminInterface();
     sawa_server_start();
     exit(EXIT_SUCCESS);
 }
@@ -178,7 +183,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
     
-    sawa_start_admin_interface();
+    admin = new AdminInterface();
     sawa_server_start();
     
     return 0;
