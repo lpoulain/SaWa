@@ -1,5 +1,6 @@
 #define _BSD_SOURCE
 
+#include <cstddef>
 #include <curses.h>
 #include <iostream>
 #include <stdlib.h>
@@ -16,7 +17,7 @@ using namespace std;
 Display *screen;
 
 class DisplayDefault : public Display {
-    const char *info_label[3];
+    string info_label[3];
     
 public:    
     void init() {
@@ -35,7 +36,7 @@ public:
         mvaddstr(2, 0, "Active?    :");
         mvaddstr(3, 0, "Connections:");
         for (i=0; i<3; i++) {
-            if (info_label[i] != NULL) mvaddstr(4+i, 0, info_label[i]);
+            if (!info_label[i].empty()) mvaddstr(4+i, 0, info_label[i].c_str());
         }
 
         refresh();
@@ -44,7 +45,7 @@ public:
     void refresh_thread(struct connection_thread *thread_info, int i) {
         char buffer[6];
 
-        if (info_label[i] == NULL) return;
+        if (info_label[i].empty()) return;
 
         memset(buffer, 6, 0);
         sprintf(buffer, "%d", thread_info->info[i]);
