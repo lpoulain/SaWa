@@ -19,8 +19,6 @@
 
 using namespace std;
 
-static int thread_nb = 0;
-
 void (*op_listen) (struct ConnectionThread *);
 sigset_t fSigSet;
 
