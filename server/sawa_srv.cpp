@@ -97,7 +97,7 @@ void write_file(int socket_fd, unsigned char *addr, unsigned int offset, unsigne
     screen->error("[%d]... Error %d\n", socket_fd, errno);
 }
 
-void process_request(int socket_fd, struct connection_thread *thread_info, unsigned char *addr, unsigned int size) {
+void process_request(int socket_fd, ConnectionThread *thread_info, unsigned char *addr, unsigned int size) {
     unsigned int offset;
     unsigned char op;
     
@@ -130,7 +130,7 @@ void process_request(int socket_fd, struct connection_thread *thread_info, unsig
     }
 }
 
-void sawa_listen(struct connection_thread *thread_info) {
+void sawa_listen(ConnectionThread *thread_info) {
     int socket_fd = thread_info->client_sock;
     int n, size=0;
     unsigned int expected_size;

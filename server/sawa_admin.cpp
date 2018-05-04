@@ -20,7 +20,7 @@
 extern void ctrl_c_handler(int s);
 
 void AdminInterface::statCommand(int socket_fd) {
-    unsigned char *buffer = get_thread_statistics();
+    unsigned char *buffer = pool->getThreadStatistics();
     int *buffer_size = (int*)buffer;
     
     write(socket_fd, buffer, *buffer_size);

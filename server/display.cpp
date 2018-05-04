@@ -19,7 +19,7 @@ class DisplayDefault : public Display {
     string info_label[3];
     
 public:    
-    void init() {
+    void init() override {
         char buffer[32];
         int i;
 
@@ -41,7 +41,7 @@ public:
         refresh();
     }
 
-    void refresh_thread(struct connection_thread *thread_info, int i) {
+    void refresh_thread(ConnectionThread *thread_info, int i) override {
         char buffer[6];
 
         if (info_label[i].empty()) return;
@@ -54,7 +54,7 @@ public:
     }
 
     // Displays the thread statistics
-    void thread_update(struct connection_thread *thread_info) {
+    void thread_update(ConnectionThread *thread_info) override {
         char buffer[6];
         int i;
 
@@ -65,7 +65,7 @@ public:
         refresh();
     }
 
-    void status(struct connection_thread *thread_info, int is_on) {
+    void status(ConnectionThread *thread_info, int is_on) override {
         if (is_on)
             mvaddstr(2, thread_info->nb * 6 + 14, "Y");
         else
@@ -74,7 +74,7 @@ public:
     }
 
     // Displays the thread number
-    void new_thread(struct connection_thread *thread_info) {
+    void new_thread(ConnectionThread *thread_info) override {
         char buffer[6];
         memset(buffer, 6, 0);
         sprintf(buffer, "%d", thread_info->nb);
@@ -85,16 +85,16 @@ public:
         this->status(thread_info, 1);
     }
 
-    void cleanup() {
+    void cleanup() override {
         endwin();
     }
 
     // No-op
-    void debug(const char *format, ...) {
+    void debug(const char *format, ...) override {
 
     }
 
-    void error(const char *format, ...) {
+    void error(const char *format, ...) override {
         char buffer[256];
 
         va_list argptr;
@@ -121,15 +121,15 @@ void select_ncurses_display() {
 class DisplayDebug : public Display {
 public:
 
-    void init() {
+    void init() override {
         cout << "Server started on port " << server_port << endl;
     }
 
-    void new_thread(struct connection_thread *thread_info) {
+    void new_thread(ConnectionThread *thread_info) override {
         cout << "Created thread " << thread_info->nb << endl;
     }
 
-    void debug(const char *format, ...) {
+    void debug(const char *format, ...) override {
         struct timeval tv;
         int sec, msec;
         gettimeofday(&tv, NULL);
@@ -143,18 +143,18 @@ public:
         va_end(argptr);
     }
 
-    void error(const char *format, ...) {
+    void error(const char *format, ...) override {
         va_list argptr;
         va_start(argptr, format);
         vfprintf(stderr, format, argptr);
         va_end(argptr);
     }
 
-    void cleanup() { }
-    void refresh_thread(struct connection_thread *thread_info, int i) { }
-    void thread_update(struct connection_thread *thread_info) { }
+    void cleanup() override { }
+    void refresh_thread(ConnectionThread *thread_info, int i) override { }
+    void thread_update(ConnectionThread *thread_info) override { }
 
-    void status(struct connection_thread *thread_info, int is_on) {
+    void status(ConnectionThread *thread_info, int is_on) override {
         struct timeval tv;
         int sec, msec;
         gettimeofday(&tv, NULL);
@@ -178,13 +178,13 @@ static FILE *fd_log;
 
 class DisplayDaemon : public Display {
 public:
-    void init() {
+    void init() override {
         fd_log = fopen("./sawa.log", "a+");
     }
 
-    void new_thread(struct connection_thread *thread_info) { }
+    void new_thread(ConnectionThread *thread_info) override { }
 
-    void debug(const char *format, ...) {
+    void debug(const char *format, ...) override {
         if (!debug_flag) return;
 
         va_list argptr;
@@ -195,13 +195,13 @@ public:
         fflush(fd_log);
     }
 
-    void cleanup() {
+    void cleanup() override {
         fclose(fd_log);
     }
 
-    void refresh_thread(struct connection_thread *thread_info, int i) { }
-    void thread_update(struct connection_thread *thread_info) { }
-    void status(struct connection_thread *thread_info, int is_on) { }
+    void refresh_thread(ConnectionThread *thread_info, int i) override { }
+    void thread_update(ConnectionThread *thread_info) override { }
+    void status(ConnectionThread *thread_info, int is_on) override { }
     
     void error(const char *format, ...) {
         va_list argptr;

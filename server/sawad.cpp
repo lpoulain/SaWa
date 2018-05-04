@@ -31,10 +31,11 @@ int socket_desc;
 void ctrl_c_handler(int s) {
     delete admin;
 
-    int nb_conn = thread_pool_cleanup();
+//    int nb_conn = thread_pool_cleanup();
+    delete pool;
     
     shutdown(socket_desc, SHUT_RDWR);
-    screen->debug("Shutting down...(%d connections dropped)\n", nb_conn);
+  //  screen->debug("Shutting down...(%d connections dropped)\n", nb_conn);
     
     screen->cleanup();
     delete screen;
@@ -56,7 +57,7 @@ int sawa_server_start() {
     struct connection *conn;
     struct sockaddr_in server , client;
     int option = 1;
-     
+    
     //Create socket
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
@@ -89,7 +90,8 @@ int sawa_server_start() {
     while( (client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
     {
         screen->debug("[Socket %d] New request\n", client_sock);
-        handle_new_connection(client_sock);
+        pool->handleNewConnection(client_sock);
+        //handle_new_connection(client_sock);
     }
      
     if (client_sock < 0)
@@ -175,7 +177,7 @@ int main(int argc, char *argv[]) {
     else
         sawa_init();
 
-    if (thread_pool_init()) return 1;
+    pool = new ThreadPool();
     
     // Currently not working
     if (daemon) {

@@ -8,7 +8,7 @@
 #define SAWA_MSG_ERR    0x43
 #define SAWA_MSG_NOAUTH 0x44
 
-struct connection_thread;
+class ConnectionThread;
 
 extern void HTTP_init();
 extern void HTTP_cleanup();
@@ -16,5 +16,5 @@ extern void sawa_init();
 extern int server_port;
 extern void ctrl_c_handler();
 
-extern void (*op_listen) (struct connection_thread *);
+extern void (*op_listen) (ConnectionThread *);
 extern int debug_flag;

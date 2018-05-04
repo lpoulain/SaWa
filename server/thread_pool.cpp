@@ -21,24 +21,24 @@ using namespace std;
 
 static int thread_nb = 0;
 
-void (*op_listen) (struct connection_thread *);
+void (*op_listen) (struct ConnectionThread *);
 sigset_t fSigSet;
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Thread startup function
 /////////////////////////////////////////////////////////////////////////////////////
 
-void release_thread(struct connection_thread *thread_info);
+ThreadPool *pool;
 
 void *connection_handler(void *ti)
 {
-    struct connection_thread *thread_info = (struct connection_thread *)ti;
+    struct ConnectionThread *thread_info = (struct ConnectionThread *)ti;
     int nSig;
 
     while (1) {
         op_listen(thread_info);
         close(thread_info->client_sock);
-        release_thread(thread_info);
+        pool->releaseThread(thread_info);
         
         sigwait(&fSigSet, &nSig);
         screen->status(thread_info, 1);
@@ -51,25 +51,22 @@ void *connection_handler(void *ti)
 // Threads handling TCP connections
 /////////////////////////////////////////////////////////////////////////////////////
 
-pthread_mutex_t idle_threads_lock;
-pthread_mutex_t all_threads_lock;
-
-struct connection_thread *idle_threads = nullptr;
-struct connection_thread *all_threads = nullptr;
+ConnectionThread::ConnectionThread(int client_sock) {
+    int i;
+    
+    this->next = nullptr;
+    this->client_sock = client_sock;
+    this->nb_connections = 1;
+    for (i=0; i<3; i++) this->info[i] = 0;
+    
+    pthread_cond_init(&(this->cv), NULL);
+    pthread_mutex_init(&(this->mp), NULL);    
+}
 
 // There is no idle thread, so we create a new one
-struct connection_thread *new_thread(int client_sock) {
-    int i;
-    struct connection_thread *thread_info = (struct connection_thread *)malloc(sizeof(struct connection_thread));
+struct ConnectionThread *ThreadPool::newThread(int client_sock) {
+    ConnectionThread *thread_info = new ConnectionThread(client_sock);
     
-    thread_info->next = nullptr;
-    thread_info->client_sock = client_sock;
-    thread_info->nb_connections = 1;
-    for (i=0; i<3; i++) thread_info->info[i] = 0;
-    
-    pthread_cond_init(&(thread_info->cv), NULL);
-    pthread_mutex_init(&(thread_info->mp), NULL);
-
     pthread_mutex_lock(&all_threads_lock);
         thread_info->nb = thread_nb++;
         thread_info->next = all_threads;
@@ -89,7 +86,7 @@ struct connection_thread *new_thread(int client_sock) {
 }
 
 // A thread is done executing, put it back in the unassigned pool
-void release_thread(struct connection_thread *thread_info) {
+void ThreadPool::releaseThread(ConnectionThread* thread_info) {
     thread_info->client_sock = -1;
 
     pthread_mutex_lock(&idle_threads_lock);
@@ -101,11 +98,11 @@ void release_thread(struct connection_thread *thread_info) {
 }
 
 // Reuse an idle thread
-struct connection_thread *reuse_thread(int client_sock) {
-    struct connection_thread *thread_info = nullptr;
+ConnectionThread *ThreadPool::reuseThread(int client_sock) {
+    struct ConnectionThread *thread_info = nullptr;
 
     // Is there any idle thread?
-    if (idle_threads == nullptr) return nullptr;
+    if (this->idle_threads == nullptr) return nullptr;
     
     // If there is, remove it from the idle queue
     pthread_mutex_lock(&idle_threads_lock);
@@ -125,21 +122,20 @@ struct connection_thread *reuse_thread(int client_sock) {
 }
 
 ////////////////////////////////////////////////////////
-void handle_new_connection(int client_sock) {
+void ThreadPool::handleNewConnection(int client_sock) {
     // Try to reuse an idle thread
-    struct connection_thread *thread_info = reuse_thread(client_sock);
+    struct ConnectionThread *thread_info = this->reuseThread(client_sock);
     // If there is no idle thread, create a new one
-    if (thread_info == nullptr) new_thread(client_sock);
+    if (thread_info == nullptr) this->newThread(client_sock);
 }
 
 ////////////////////////////////////////////////////////
 
-int thread_pool_init() {
+ThreadPool::ThreadPool() {
     if (pthread_mutex_init(&idle_threads_lock, NULL) != 0 ||
         pthread_mutex_init(&all_threads_lock, NULL) != 0)
     {
-        cerr << "\n mutex init has failed" << endl;
-        return 1;
+        throw "Thread Pool mutex initialization has failed";
     }
 
     sigemptyset(&fSigSet);
@@ -147,13 +143,10 @@ int thread_pool_init() {
     sigaddset(&fSigSet, SIGSEGV);
 
     pthread_sigmask(SIG_BLOCK, &fSigSet, NULL);
-    
-    return 0;
 }
 
-int thread_pool_cleanup() {
-    struct connection *conn_tmp;
-    struct connection_thread *thread_info;
+ThreadPool::~ThreadPool() {
+    struct ConnectionThread *thread_info;
     int nb_conn = 0;
 
     while (all_threads != nullptr) {
@@ -171,28 +164,16 @@ int thread_pool_cleanup() {
         free(thread_info);
     }
     
-    return nb_conn;
+//    return nb_conn;
 }
 
 ////////////////////////////////////////////////////////////
 // Thread serialization
 ////////////////////////////////////////////////////////////
 
-int get_nb_threads() {
-    int nb_threads = 0;
-    struct connection_thread *thread_info = all_threads;
-
-    while (thread_info != nullptr) {
-        nb_threads++;
-        thread_info = thread_info->next;
-    }
-
-    return nb_threads;
-}
-
-void serialize_thread_stats(unsigned char *buffer) {
-    struct thread_stat *thread_st = (struct thread_stat *)buffer + thread_nb - 1;
-    struct connection_thread *thread_info = all_threads;
+void ThreadPool::serializeThreadStats(unsigned char* buffer) {
+    ThreadStat *thread_st = (ThreadStat *)buffer + thread_nb - 1;
+    ConnectionThread *thread_info = all_threads;
     int i;
     
     while (thread_info != nullptr) {
@@ -205,19 +186,19 @@ void serialize_thread_stats(unsigned char *buffer) {
     }
 }
 
-unsigned char *get_thread_statistics() {
+unsigned char *ThreadPool::getThreadStatistics() {
     int *size;
     unsigned char *buffer_out;
-    struct connection_thread *thread_info;
-    struct thread_stat *thread_st;
+//    ConnectionThread *thread_info;
+    ThreadStat *thread_st;
     
     pthread_mutex_lock(&all_threads_lock);
-        buffer_out = (unsigned char *)malloc(4 + thread_nb*sizeof(struct thread_stat));
-        memset(buffer_out, 0, 4 + thread_nb*sizeof(struct thread_stat));
+        buffer_out = (unsigned char *)malloc(4 + thread_nb*sizeof(ThreadStat));
+        memset(buffer_out, 0, 4 + thread_nb*sizeof(ThreadStat));
         size = (int *)buffer_out;
-        *size = thread_nb * sizeof(struct thread_stat);
+        *size = thread_nb * sizeof(ThreadStat);
 
-        serialize_thread_stats(buffer_out + 4);
+        serializeThreadStats(buffer_out + 4);
     pthread_mutex_unlock(&all_threads_lock);
     
     return buffer_out;

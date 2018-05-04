@@ -6,7 +6,17 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "sawa.h"
+
+#define SAWA_INFO  0x01
+#define SAWA_READ  0x02
+#define SAWA_WRITE 0x03
+#define SAWA_STOP  0x04
+#define SAWA_STAT  0x05
+
+#define SAWA_MSG_OK     0x42
+#define SAWA_MSG_ERR    0x43
+#define SAWA_MSG_NOAUTH 0x44
+
 
 int server_port = 5000;
 int admin_port = 5001;

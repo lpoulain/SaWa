@@ -171,7 +171,7 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     return keep_alive;
 }
 
-void HTTP_listen(struct connection_thread *thread_info) {
+void HTTP_listen(ConnectionThread *thread_info) {
     int socket_fd = thread_info->client_sock;
     int n = 1, size=0;
     unsigned int expected_size;
