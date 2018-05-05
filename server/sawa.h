@@ -8,6 +8,11 @@
 #define SAWA_MSG_ERR    0x43
 #define SAWA_MSG_NOAUTH 0x44
 
+#define FAILURE_CREATE_SOCKET   0x100
+#define FAILURE_BIND            0x101
+#define FAILURE_ACCEPT          0x102
+#define FAILURE_MUTEX_INIT      0x103
+
 class ConnectionThread;
 
 extern void HTTP_init();

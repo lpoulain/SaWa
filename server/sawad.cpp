@@ -17,6 +17,7 @@
 #include "display.h"
 #include "sawa_admin.h"
 #include "server.h"
+#include "util.h"
 
 using namespace std;
 
@@ -101,26 +102,30 @@ int main(int argc, char *argv[]) {
         if (!strcmp(argv[i], "-http")) http = 1;
     }
 
-    if (daemon == 1)
-        select_daemon_display();
-    else if (debug_flag == 1)
-        select_debug_display();
-    else
-        select_ncurses_display();
-    
-    if (http)
-        server = new HTTPServer();
-    else
-        server = new SawaServer();
+    try {
+        if (daemon == 1)
+            select_daemon_display();
+        else if (debug_flag == 1)
+            select_debug_display();
+        else
+            select_ncurses_display();
 
-    pool = new ThreadPool();
+        if (http)
+            server = new HTTPServer();
+        else
+            server = new SawaServer();
+
+        pool = new ThreadPool();
+
+        if (daemon) {
+            start_as_daemon();
+            return 0;
+        }
     
-    if (daemon) {
-        start_as_daemon();
-        return 0;
+        server->start();
+    } catch(int failure_code) {
+        Util::displayError(failure_code);
     }
-    
-    server->start();
     
     return 0;
 }

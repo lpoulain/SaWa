@@ -7,6 +7,8 @@
 #include "sawa_admin.h"
 #include "display.h"
 #include "thread_pool.h"
+#include "sawa.h"
+#include "util.h"
 
 using namespace std;
 
@@ -19,7 +21,8 @@ Server::Server(int port) {
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
     {
-        throw "Could not create socket";
+        Util::setDebugInfo(port);
+        throw FAILURE_CREATE_SOCKET;
     }
     setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     
@@ -31,7 +34,8 @@ Server::Server(int port) {
     //Bind
     if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
     {
-        throw "Error: Bind failed";
+        Util::setDebugInfo(port);
+        throw FAILURE_BIND;
     }
     
     admin = new AdminInterface();
@@ -57,7 +61,7 @@ void Server::start() {
      
     if (client_sock < 0)
     {
-        throw "Failed to accept incoming connection";
+        throw FAILURE_ACCEPT;
     }    
 }
 

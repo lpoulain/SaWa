@@ -133,7 +133,7 @@ ThreadPool::ThreadPool() {
     if (pthread_mutex_init(&idle_threads_lock, NULL) != 0 ||
         pthread_mutex_init(&all_threads_lock, NULL) != 0)
     {
-        throw "Thread Pool mutex initialization has failed";
+        throw FAILURE_MUTEX_INIT;
     }
 
     sigemptyset(&fSigSet);
