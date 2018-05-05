@@ -16,29 +16,18 @@
 #include "thread_pool.h"
 #include "display.h"
 #include "sawa_admin.h"
+#include "server.h"
 
 using namespace std;
 
-int server_port = 5000;
 int debug_flag = 0;
 
 AdminInterface *admin;
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-int socket_desc;
-
 void ctrl_c_handler(int s) {
-    delete admin;
-
-//    int nb_conn = thread_pool_cleanup();
-    delete pool;
-    
-    shutdown(socket_desc, SHUT_RDWR);
-  //  screen->debug("Shutting down...(%d connections dropped)\n", nb_conn);
-    
-    screen->cleanup();
-    delete screen;
+    delete server;
     exit(0);
 }
 
@@ -50,57 +39,6 @@ void set_ctrl_c_handler() {
     sigIntHandler.sa_flags = 0;
     
     sigaction(SIGINT, &sigIntHandler, NULL);
-}
-
-int sawa_server_start() {
-    int client_sock , c , *new_sock;
-    struct connection *conn;
-    struct sockaddr_in server , client;
-    int option = 1;
-    
-    //Create socket
-    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-    if (socket_desc == -1)
-    {
-        cerr << "Could not create socket" << endl;
-    }
-    setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
-    
-    //Prepare the sockaddr_in structure
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(server_port);
-     
-    //Bind
-    if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
-    {
-        //print the error message
-        cerr << "bind failed. Error" << endl;
-        return 1;
-    }
-     
-    //Listen
-    c = listen(socket_desc , 3);
-     
-    //Accept and incoming connection
-    screen->init();
-
-    c = sizeof(struct sockaddr_in);
-     
-    while( (client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
-    {
-        screen->debug("[Socket %d] New request\n", client_sock);
-        pool->handleNewConnection(client_sock);
-        //handle_new_connection(client_sock);
-    }
-     
-    if (client_sock < 0)
-    {
-        screen->error("accept failed");
-        return 1;
-    }
-     
-    return 0;    
 }
 
 void start_as_daemon() {
@@ -142,9 +80,7 @@ void start_as_daemon() {
     /* Daemon-specific initialization goes here */
 
     /* The Big Loop */
-    //sawa_start_admin_interface();
-    admin = new AdminInterface();
-    sawa_server_start();
+    server->start();
     exit(EXIT_SUCCESS);
 }
 
@@ -159,7 +95,7 @@ int main(int argc, char *argv[]) {
         if (!strcmp(argv[i], "-daemon")) daemon = 1;
         if (!strcmp(argv[i], "-debug")) debug_flag = 1;
         if (!strcmp(argv[i], "-help")) {
-            cout << "Usage: " << argv[0] << " [-deamon] [-http]\n" << endl;
+            cout << "Usage: " << argv[0] << " [-daemon] [-http]\n" << endl;
             return 0;
         }
         if (!strcmp(argv[i], "-http")) http = 1;
@@ -173,20 +109,18 @@ int main(int argc, char *argv[]) {
         select_ncurses_display();
     
     if (http)
-        HTTP_init();
+        server = new HTTPServer();
     else
-        sawa_init();
+        server = new SawaServer();
 
     pool = new ThreadPool();
     
-    // Currently not working
     if (daemon) {
         start_as_daemon();
         return 0;
     }
     
-    admin = new AdminInterface();
-    sawa_server_start();
+    server->start();
     
     return 0;
 }

@@ -11,3 +11,5 @@ public:
     AdminInterface();
     ~AdminInterface();
 };
+
+extern AdminInterface *admin;

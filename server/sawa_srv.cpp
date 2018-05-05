@@ -13,29 +13,9 @@
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
+#include "server.h"
 
-static const char *filesystem = "./filesystem";
-static unsigned int nb_sectors = 2048;
-static int fd;
-
-void dump_mem(unsigned char *addr, int size) {
-    int i, j=0;
-    screen->debug("Received %d bytes\n", size);
-    while (1) {
-        printf("%04x ", j);
-        for (i=0; i<16; i++) {
-            if (j >= size) {
-                printf("\n");
-                return;
-            }
-            printf(" %02x", addr[j]);
-            j++;
-        }
-        printf("\n");
-    }
-}
-
-void send_info(int socket_fd) {
+void SawaServer::sendInfo(int socket_fd) {
     char buffer_out[4];
     screen->debug("INFO command received\n");
     write(socket_fd, &nb_sectors, sizeof(int));
@@ -44,7 +24,7 @@ void send_info(int socket_fd) {
 
 // Checks that the bound .
 // If not, sends an SAWA_MSG_ERR error
-int check_valid_request(int socket_fd, unsigned int offset, unsigned int size) {
+int SawaServer::checkValidRequest(int socket_fd, unsigned int offset, unsigned int size) {
     char response;
     
     if (size + offset <= nb_sectors * 512) return 1;
@@ -54,13 +34,13 @@ int check_valid_request(int socket_fd, unsigned int offset, unsigned int size) {
     return 0;
 }
 
-void read_file(int socket_fd, unsigned int offset, unsigned int size) {
+void SawaServer::readFile(int socket_fd, unsigned int offset, unsigned int size) {
     unsigned char *buffer;
     
     screen->debug("[%d] Read %d bytes (0x%x) starting at offset %d\n", socket_fd, size, size, offset);
     
     // Check that the request is valid
-    if (!check_valid_request(socket_fd, offset, size)) return;
+    if (!this->checkValidRequest(socket_fd, offset, size)) return;
 
     lseek(fd, offset, SEEK_SET);
     buffer = (unsigned char*)malloc(size);
@@ -73,13 +53,13 @@ void read_file(int socket_fd, unsigned int offset, unsigned int size) {
     free(buffer);
 }
 
-void write_file(int socket_fd, unsigned char *addr, unsigned int offset, unsigned int size) {
+void SawaServer::writeFile(int socket_fd, unsigned char* addr, unsigned int offset, unsigned int size) {
     char response = SAWA_MSG_OK;
     unsigned char *buffer;
     screen->debug("[%d] Write %d bytes starting at offset %d\n", socket_fd, size, offset);
 
     // Check that the request is valid
-    if (!check_valid_request(socket_fd, offset, size)) return;
+    if (!this->checkValidRequest(socket_fd, offset, size)) return;
     
     if (lseek(fd, offset, SEEK_SET) >= 0) {
         if (write(fd, addr, (ssize_t)size) >= 0) {
@@ -97,16 +77,14 @@ void write_file(int socket_fd, unsigned char *addr, unsigned int offset, unsigne
     screen->error("[%d]... Error %d\n", socket_fd, errno);
 }
 
-void process_request(int socket_fd, ConnectionThread *thread_info, unsigned char *addr, unsigned int size) {
+void SawaServer::processRequest(int socket_fd, ConnectionThread* thread_info, unsigned char* addr, unsigned int size) {
     unsigned int offset;
     unsigned char op;
-    
-//    dump_mem(addr, size);
     
     op = addr[0];
     
     if (op == SAWA_INFO) {
-        send_info(socket_fd);
+        this->sendInfo(socket_fd);
         thread_info->info[0]++;
         screen->refresh_thread(thread_info, 0);
         return;
@@ -117,22 +95,22 @@ void process_request(int socket_fd, ConnectionThread *thread_info, unsigned char
     switch(op) {
         case SAWA_READ:
             size = *((unsigned int*)(addr+1+sizeof(int)));
-            read_file(socket_fd, offset, size);
+            this->readFile(socket_fd, offset, size);
             thread_info->info[1]++;
             screen->refresh_thread(thread_info, 1);
             break;
         case SAWA_WRITE:
             size -= (1 + sizeof(int));
-            write_file(socket_fd, addr + 1 + sizeof(int), offset, size);
+            this->writeFile(socket_fd, addr + 1 + sizeof(int), offset, size);
             thread_info->info[2]++;
             screen->refresh_thread(thread_info, 2);
             break;
     }
 }
 
-void sawa_listen(ConnectionThread *thread_info) {
+void SawaServer::readData(ConnectionThread* thread_info) {
     int socket_fd = thread_info->client_sock;
-    int n, size=0;
+    int n;
     unsigned int expected_size;
     unsigned char *buffer_in;
     
@@ -152,21 +130,21 @@ void sawa_listen(ConnectionThread *thread_info) {
                 return;
             }
 
-            process_request(socket_fd, thread_info, buffer_in, expected_size);
+            this->processRequest(socket_fd, thread_info, buffer_in, expected_size);
             free(buffer_in);
         }
     }
 }
 
-int get_fs_file() {
+int SawaServer::getFilesystemFile() {
     int nb_bytes;
     int fd;
     
-    fd= open(filesystem, O_RDWR, 0700);
+    fd= open(filesystem.c_str(), O_RDWR, 0700);
     if (fd > 0) return fd;
     
     screen->debug("Filesystem file does not exist, creating it...\n");
-    fd = open(filesystem, O_RDWR|O_CREAT, 0700);
+    fd = open(filesystem.c_str(), O_RDWR|O_CREAT, 0700);
     
     nb_bytes = nb_sectors * 512;
     unsigned char *buffer = (unsigned char*)malloc(nb_bytes);
@@ -177,9 +155,13 @@ int get_fs_file() {
     return fd;
 }
 
-void sawa_init() {
-    fd = get_fs_file();
+SawaServer::SawaServer() : Server(5000) {
+    this->nb_sectors = 2048;
+    this->filesystem = "./filesystem";
     
-    op_listen = sawa_listen;
-    server_port = 5000;
+    fd = this->getFilesystemFile();
+}
+
+SawaServer::~SawaServer() {
+    close(fd);
 }

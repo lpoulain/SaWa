@@ -10,6 +10,7 @@
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
+#include "server.h"
 
 using namespace std;
 
@@ -23,7 +24,7 @@ public:
         char buffer[32];
         int i;
 
-        sprintf(buffer, "Server started on port %d\n", server_port);
+        sprintf(buffer, "Server started on port %d\n", server->port);
 
         initscr();
         cbreak();
@@ -122,7 +123,7 @@ class DisplayDebug : public Display {
 public:
 
     void init() override {
-        cout << "Server started on port " << server_port << endl;
+        cout << "Server started on port " << server->port << endl;
     }
 
     void new_thread(ConnectionThread *thread_info) override {

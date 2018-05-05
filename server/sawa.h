@@ -12,8 +12,6 @@ class ConnectionThread;
 
 extern void HTTP_init();
 extern void HTTP_cleanup();
-extern void sawa_init();
-extern int server_port;
 extern void ctrl_c_handler();
 
 extern void (*op_listen) (ConnectionThread *);

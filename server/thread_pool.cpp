@@ -16,10 +16,10 @@
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
+#include "server.h"
 
 using namespace std;
 
-void (*op_listen) (struct ConnectionThread *);
 sigset_t fSigSet;
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -34,7 +34,7 @@ void *connection_handler(void *ti)
     int nSig;
 
     while (1) {
-        op_listen(thread_info);
+        server->readData(thread_info);
         close(thread_info->client_sock);
         pool->releaseThread(thread_info);
         
@@ -162,7 +162,7 @@ ThreadPool::~ThreadPool() {
         free(thread_info);
     }
     
-//    return nb_conn;
+    screen->debug("Shutting down...(%d connections dropped)\n", nb_conn);
 }
 
 ////////////////////////////////////////////////////////////
@@ -187,8 +187,6 @@ void ThreadPool::serializeThreadStats(unsigned char* buffer) {
 unsigned char *ThreadPool::getThreadStatistics() {
     int *size;
     unsigned char *buffer_out;
-//    ConnectionThread *thread_info;
-    ThreadStat *thread_st;
     
     pthread_mutex_lock(&all_threads_lock);
         buffer_out = (unsigned char *)malloc(4 + thread_nb*sizeof(ThreadStat));

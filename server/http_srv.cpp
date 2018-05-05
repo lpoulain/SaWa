@@ -13,6 +13,7 @@
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
+#include "server.h"
 
 using namespace std;
 
@@ -64,7 +65,7 @@ struct web_file {
 // It is a very simplistic cache which does not release anything *ever*
 map<string, struct web_file *> cache;
 
-struct web_file *get_file(char *path) {
+struct web_file *HTTPServer::getFile(char* path) {
     struct stat st;
     int fd, file_size, n;
     struct web_file *the_file;
@@ -99,7 +100,7 @@ struct web_file *get_file(char *path) {
 // Process the HTTP request
 // Request 0 if close connection
 // Request 1 if keep alive
-int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned int size) {
+int HTTPServer::processRequest(int socket_fd, request_message* msg, unsigned int size) {
     struct request_message *tmp_msg = msg;
     unsigned int offset;
     unsigned char op;
@@ -142,7 +143,7 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     // Analysis over. Processing the request
     screen->debug("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
     
-    the_file = get_file(url);
+    the_file = this->getFile(url);
     
     // We are done reading the HTTP request, free the resource
 //    free(url);
@@ -171,7 +172,7 @@ int process_HTTP_request(int socket_fd, struct request_message *msg, unsigned in
     return keep_alive;
 }
 
-void HTTP_listen(ConnectionThread *thread_info) {
+void HTTPServer::readData(ConnectionThread* thread_info) {
     int socket_fd = thread_info->client_sock;
     int n = 1, size=0;
     unsigned int expected_size;
@@ -192,7 +193,7 @@ void HTTP_listen(ConnectionThread *thread_info) {
         // If this is the end of the message, send it
         if (n < request_message_len || strcmp((char*)msg + request_message_len - 4, "\r\n\r\n")) {
             // If the connection is not Keep-Alive, break the connection
-            if (!process_HTTP_request(socket_fd, top_msg, n)) return;
+            if (!this->processRequest(socket_fd, top_msg, n)) return;
             
             // Otherwise be ready for another message
             top_msg = (struct request_message *)malloc(sizeof(struct request_message));
@@ -210,10 +211,7 @@ void HTTP_listen(ConnectionThread *thread_info) {
     }
 }
 
-void HTTP_init() {
-    op_listen = HTTP_listen;
-    server_port = 8080;
-    
+HTTPServer::HTTPServer() : Server(8080) {
     HTTP_200_len = strlen(HTTP_200);
     HTTP_404_len = strlen(HTTP_404);
     HTTP_500_len = strlen(HTTP_500);
@@ -221,5 +219,5 @@ void HTTP_init() {
     index_html_len = strlen(index_html);    
 }
 
-void HTTP_cleanup() {
+HTTPServer::~HTTPServer() {
 }
