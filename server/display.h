@@ -1,6 +1,9 @@
-void select_ncurses_display();
-void select_debug_display();
-void select_daemon_display();
+#define DISPLAY_DEFAULT 0x01
+#define DISPLAY_DEBUG   0x02
+#define DISPLAY_DAEMON  0x03
+#define DISPLAY_QUIET   0x04
+
+void select_display(int);
 
 class ConnectionThread;
 

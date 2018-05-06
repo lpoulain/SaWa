@@ -113,10 +113,6 @@ public:
     }
 };
 
-void select_ncurses_display() {
-    screen = new DisplayDefault();
-}
-
 ///////////////////////////////////////////////////////////////////
 
 class DisplayDebug : public Display {
@@ -169,10 +165,6 @@ public:
     }
 };
 
-void select_debug_display() {
-    screen = new DisplayDebug();
-}
-
 ///////////////////////////////////////////////////////////////////
 
 static FILE *fd_log;
@@ -214,6 +206,47 @@ public:
     }
 };
 
-void select_daemon_display() {
-    screen = new DisplayDaemon();
+//////////////////////////////////////////////////////////////////////////////////
+
+class DisplayQuiet : public Display {
+public:
+
+    void init() override {
+        cout << "Server started on port " << server->port << endl;
+    }
+
+    void error(const char *format, ...) override {
+        va_list argptr;
+        va_start(argptr, format);
+        vfprintf(stderr, format, argptr);
+        va_end(argptr);
+    }
+
+    void new_thread(ConnectionThread *thread_info) override { }
+    void debug(const char *format, ...) override { }
+    void cleanup() override { }
+    void refresh_thread(ConnectionThread *thread_info, int i) override { }
+    void thread_update(ConnectionThread *thread_info) override { }
+    void status(ConnectionThread *thread_info, int is_on) override { }
+};
+
+//////////////////////////////////////////////////////////////////////////////////
+
+void select_display(int display_code) {
+    switch(display_code) {
+        case DISPLAY_DEFAULT:
+            screen = new DisplayDefault();
+            break;
+        case DISPLAY_DEBUG:
+            screen = new DisplayDebug();
+            break;
+        case DISPLAY_DAEMON:
+            screen = new DisplayDaemon();
+            break;
+        case DISPLAY_QUIET:
+            screen = new DisplayQuiet();
+            break;
+        default:
+            screen = new DisplayDefault();
+    }
 }

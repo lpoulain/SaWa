@@ -90,13 +90,15 @@ void start_as_daemon() {
 int main(int argc, char *argv[]) {
     int daemon = 0;
     int http = 0;
-    int i;
+    int quiet = 0;
+    int i, display_code;
     
     set_ctrl_c_handler();
 
     for (i=1; i<argc; i++) {
         if (!strcmp(argv[i], "-daemon")) daemon = 1;
         if (!strcmp(argv[i], "-debug")) debug_flag = 1;
+        if (!strcmp(argv[i], "-quiet")) quiet = 1;
         if (!strcmp(argv[i], "-help")) {
             cout << "Usage: " << argv[0] << " [-daemon] [-http]\n" << endl;
             return 0;
@@ -106,12 +108,15 @@ int main(int argc, char *argv[]) {
 
     try {
         if (daemon == 1)
-            select_daemon_display();
+            display_code = DISPLAY_DAEMON;
         else if (debug_flag == 1)
-            select_debug_display();
+            display_code = DISPLAY_DEBUG;
+        else if (quiet == 1)
+            display_code = DISPLAY_QUIET;
         else
-            select_ncurses_display();
-
+            display_code = DISPLAY_DEFAULT;
+        select_display(display_code);
+        
         if (http)
             server = new HTTPServer();
         else
