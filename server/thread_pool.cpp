@@ -136,6 +136,10 @@ ThreadPool::ThreadPool() {
         throw FAILURE_MUTEX_INIT;
     }
 
+    thread_nb = 0;
+    idle_threads = nullptr;
+    all_threads = nullptr;
+    
     sigemptyset(&fSigSet);
     sigaddset(&fSigSet, SIGUSR1);
     sigaddset(&fSigSet, SIGSEGV);
@@ -159,7 +163,7 @@ ThreadPool::~ThreadPool() {
         }
         
         all_threads = all_threads->next;
-        free(thread_info);
+        delete thread_info;
     }
     
     screen->debug("Shutting down...(%d connections dropped)\n", nb_conn);
@@ -189,7 +193,7 @@ unsigned char *ThreadPool::getThreadStatistics() {
     unsigned char *buffer_out;
     
     pthread_mutex_lock(&all_threads_lock);
-        buffer_out = (unsigned char *)malloc(4 + thread_nb*sizeof(ThreadStat));
+        buffer_out = new unsigned char[4 + thread_nb*sizeof(ThreadStat)];
         memset(buffer_out, 0, 4 + thread_nb*sizeof(ThreadStat));
         size = (int *)buffer_out;
         *size = thread_nb * sizeof(ThreadStat);

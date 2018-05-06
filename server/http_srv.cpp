@@ -36,19 +36,37 @@ struct request_message {
     struct request_message *next;
 };
 
-struct web_file {
+class WebFile {
     char *content;
     int size;
+    
+public:
+    char *getContent() { return content; }
+    int getSize() { return size; }
+    
+    WebFile(char *path, int file_size) {
+        this->size = file_size;
+        this->content = new char[file_size];
+    
+        std::FILE *fp = std::fopen(path, "r");
+        std::fseek(fp, 0, SEEK_SET);
+        std::fread(this->content, sizeof(char), this->size, fp);
+        std::fclose(fp);        
+    }
+    
+    ~WebFile() {
+        delete [] content;
+    }
 };
 
 // Used to cache the files read from the disk
 // It is a very simplistic cache which does not release anything *ever*
-map<string, struct web_file *> cache;
+map<string, WebFile *> cache;
 
-struct web_file *HTTPServer::getFile(char* path) {
+struct WebFile *HTTPServer::getFile(char* path) {
     struct stat st;
     int fd, file_size, n;
-    struct web_file *the_file;
+    WebFile *the_file;
     
     // Check if the file is cached. If it is, return it
     the_file = cache[path];
@@ -62,14 +80,7 @@ struct web_file *HTTPServer::getFile(char* path) {
     if (file_size == 0) return nullptr;
 
     // The file exists, loads it in memory
-    the_file = (struct web_file *)malloc(sizeof(struct web_file));
-    the_file->size = file_size;
-    the_file->content = (char *)malloc(file_size);
-    
-    std::FILE *fp = std::fopen(path, "r");
-    std::fseek(fp, 0, SEEK_SET);
-    std::fread(the_file->content, sizeof(char), the_file->size, fp);
-    std::fclose(fp);
+    the_file = new WebFile(path, file_size);
 
     // Then save it in the cache
     cache[path] = the_file;
@@ -88,12 +99,12 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, unsigned int
     char *url;
     int first_line_end = strlen(buffer_in), url_start, url_end, url_length, ext_start, header_size;
     int keep_alive = 0;
-    struct web_file *the_file;
+    WebFile *the_file;
 
     // Analyze the HTTP request
     if (strncmp(buffer_in, "GET /", 5)) {
         write(socket_fd, HTTP_500, HTTP_500_len);
-        free(buffer_in);
+        delete [] buffer_in;
         return 0;
     }
     
@@ -105,9 +116,9 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, unsigned int
     url_length = url_end - url_start;
 
     if (buffer_in[url_end-1] == '/')
-        url = (char*)malloc(url_length + root_dir_len + index_html_len + 1);
+        url = new char[url_length + root_dir_len + index_html_len + 1];
     else
-        url = (char*)malloc(url_length + root_dir_len + 1);
+        url = new char[url_length + root_dir_len + 1];
     
     strcpy(url, root_dir);
     strncpy(url + root_dir_len, buffer_in + url_start, url_length);
@@ -126,10 +137,10 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, unsigned int
     the_file = this->getFile(url);
     
     // We are done reading the HTTP request, free the resource
-//    free(url);
+    delete [] url;
     while (tmp_msg != nullptr) {
         tmp_msg = tmp_msg->next;
-        free(msg);
+        delete msg;
         msg = tmp_msg;
     }
     
@@ -140,14 +151,14 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, unsigned int
     }
     
     // Otherwise, write the HTTP headers
-    buffer_out = (char*)malloc(200);
-    sprintf(buffer_out, "%sContent-Length: %d\nContent-Type: text/html;\n\n", HTTP_200, the_file->size);
+    buffer_out = new char[200];
+    sprintf(buffer_out, "%sContent-Length: %d\nContent-Type: text/html;\n\n", HTTP_200, the_file->getSize());
     header_size = strlen(buffer_out);
     
     write(socket_fd, buffer_out, header_size);
-    write(socket_fd, the_file->content, the_file->size);
+    write(socket_fd, the_file->getContent(), the_file->getSize());
     
-    free(buffer_out);
+    delete [] buffer_out;
     
     return keep_alive;
 }
@@ -156,7 +167,7 @@ void HTTPServer::readData(ConnectionThread* thread_info) {
     int socket_fd = thread_info->client_sock;
     int n = 1, size=0;
     unsigned int expected_size;
-    struct request_message *top_msg = (struct request_message *)malloc(sizeof(struct request_message));
+    struct request_message *top_msg = new request_message();
     memset(top_msg, 0, sizeof(struct request_message));
     struct request_message *msg = top_msg, *tmp_msg;
     int keep_alive;
@@ -165,7 +176,7 @@ void HTTPServer::readData(ConnectionThread* thread_info) {
         n = read(socket_fd, (char *)msg, request_message_len);
         
         if (n <= 0) {
-            free(top_msg);
+            delete top_msg;
             return;
         }
         screen->debug("[Socket %d] %d bytes request\n", socket_fd, n);
@@ -176,7 +187,7 @@ void HTTPServer::readData(ConnectionThread* thread_info) {
             if (!this->processRequest(socket_fd, top_msg, n)) return;
             
             // Otherwise be ready for another message
-            top_msg = (struct request_message *)malloc(sizeof(struct request_message));
+            top_msg = new request_message();
             top_msg->next = nullptr;
             msg = top_msg;
         }
@@ -184,7 +195,7 @@ void HTTPServer::readData(ConnectionThread* thread_info) {
         // If the message is too large to fit in a request_message structure
         // Create another one and keep listening
         else {
-            tmp_msg = (struct request_message *)malloc(sizeof(struct request_message));
+            tmp_msg = new request_message();
             msg->next = tmp_msg;
             msg = tmp_msg;
         }
@@ -200,4 +211,5 @@ HTTPServer::HTTPServer() : Server(8080) {
 }
 
 HTTPServer::~HTTPServer() {
+    cache.clear();
 }

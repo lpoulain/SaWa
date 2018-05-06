@@ -24,7 +24,7 @@ void AdminInterface::statCommand(int socket_fd) {
     int *buffer_size = (int*)buffer;
     
     write(socket_fd, buffer, *buffer_size);
-    free(buffer);
+    delete [] buffer;
 }
 
 void AdminInterface::processCommand(int socket_fd, unsigned char *buffer_in, int size) {
@@ -54,16 +54,16 @@ void AdminInterface::readCommand(int socket_fd) {
         if (expected_size > 1024) return;
 
         if (expected_size > 0) {
-            buffer_in = (unsigned char *)malloc(expected_size);
+            buffer_in = new unsigned char[expected_size];
             n = read(socket_fd, buffer_in, expected_size);
     
             if (n < 0) {
-                free(buffer_in);
+                delete [] buffer_in;
                 return;
             }
 
             this->processCommand(socket_fd, buffer_in, expected_size);
-            free(buffer_in);
+            delete [] buffer_in;
         }
     }
 }
@@ -111,7 +111,7 @@ void *AdminInterface::connectionHandler(void *ptr) {
 }
 
 AdminInterface::AdminInterface() {
-    this->thread = (pthread_t *)malloc(sizeof(pthread_t));
+    this->thread = new pthread_t();
 
     if(pthread_create(thread, NULL, AdminInterface::connectionHandler, this) < 0)
     {
@@ -124,5 +124,5 @@ AdminInterface::~AdminInterface() {
     screen->debug("Shutting down admin interface\n");
 
     shutdown(this->socket_desc, SHUT_RDWR);
-    free(this->thread);
+    delete this->thread;
 }

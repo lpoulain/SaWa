@@ -43,14 +43,14 @@ void SawaServer::readFile(int socket_fd, unsigned int offset, unsigned int size)
     if (!this->checkValidRequest(socket_fd, offset, size)) return;
 
     lseek(fd, offset, SEEK_SET);
-    buffer = (unsigned char*)malloc(size);
+    buffer = new unsigned char[size];
     read(fd, buffer, size);
     
     screen->debug("[%d] Sending data...\n", socket_fd);
 //    dump_mem(buffer, 32);
     write(socket_fd, buffer, size);
     screen->debug("[%d] ...%d bytes sent\n", socket_fd, size);
-    free(buffer);
+    delete [] buffer;
 }
 
 void SawaServer::writeFile(int socket_fd, unsigned char* addr, unsigned int offset, unsigned int size) {
@@ -122,16 +122,16 @@ void SawaServer::readData(ConnectionThread* thread_info) {
         if (expected_size > 32768) return;
 
         if (expected_size > 0) {
-            buffer_in = (unsigned char*)malloc(expected_size);
+            buffer_in = new unsigned char[expected_size];
             n = read(socket_fd, buffer_in, expected_size);
     
             if (n < 0) {
-                free(buffer_in);
+                delete [] buffer_in;
                 return;
             }
 
             this->processRequest(socket_fd, thread_info, buffer_in, expected_size);
-            free(buffer_in);
+            delete [] buffer_in;
         }
     }
 }
@@ -147,10 +147,10 @@ int SawaServer::getFilesystemFile() {
     fd = open(filesystem.c_str(), O_RDWR|O_CREAT, 0700);
     
     nb_bytes = nb_sectors * 512;
-    unsigned char *buffer = (unsigned char*)malloc(nb_bytes);
+    unsigned char *buffer = new unsigned char[nb_bytes];
     memset(buffer, 0, nb_bytes);
     write(fd, buffer, nb_bytes);
-    free(buffer);
+    delete [] buffer;
     
     return fd;
 }

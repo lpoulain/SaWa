@@ -6,7 +6,7 @@
 
 class ConnectionThread;
 struct request_message;
-struct web_file;
+class WebFile;
 
 class Server {
 protected:
@@ -42,11 +42,11 @@ public:
 };
 
 class HTTPServer : public Server {
-    std::map<std::string, struct web_file *> cache;
+    std::map<std::string, WebFile *> cache;
     
     int strnCaseStr(const char *s, const char *find, const int max);
     int processRequest(int socket_fd, struct request_message *msg, unsigned int size);
-    struct web_file *getFile(char *path);
+    struct WebFile *getFile(char *path);
     
 public:
     HTTPServer();
