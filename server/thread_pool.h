@@ -1,3 +1,6 @@
+#ifndef THREAD_POOL_H
+#define THREAD_POOL_H
+
 #include <pthread.h>
 
 class ConnectionThread {
@@ -32,14 +35,16 @@ class ThreadPool {
 
     ConnectionThread *newThread(int client_sock);
     ConnectionThread *reuseThread(int client_sock);
-    void serializeThreadStats(unsigned char *buffer);
+    void serializeThreadStats(uint8_t *buffer);
     
 public:
     ThreadPool();
     void handleNewConnection(int client_sock);
     void releaseThread(struct ConnectionThread *thread_info);
-    unsigned char *getThreadStatistics();
+    uint8_t *getThreadStatistics();
     ~ThreadPool();
 };
 
 extern ThreadPool *pool;
+
+#endif

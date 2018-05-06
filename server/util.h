@@ -7,7 +7,7 @@ class Util {
 public:
     static void setDebugInfo(int info);
     static void displayError(int failure_code);
-    static void dumpMem(unsigned char *addr, int size);
+    static void dumpMem(uint8_t *addr, int size);
     static int strnCaseStr(const char *s, const char *find, const int max);
 };
 

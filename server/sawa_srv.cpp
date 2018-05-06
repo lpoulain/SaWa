@@ -24,7 +24,7 @@ void SawaServer::sendInfo(int socket_fd) {
 
 // Checks that the bound .
 // If not, sends an SAWA_MSG_ERR error
-int SawaServer::checkValidRequest(int socket_fd, unsigned int offset, unsigned int size) {
+int SawaServer::checkValidRequest(int socket_fd, uint32_t offset, uint32_t size) {
     char response;
     
     if (size + offset <= nb_sectors * 512) return 1;
@@ -34,8 +34,8 @@ int SawaServer::checkValidRequest(int socket_fd, unsigned int offset, unsigned i
     return 0;
 }
 
-void SawaServer::readFile(int socket_fd, unsigned int offset, unsigned int size) {
-    unsigned char *buffer;
+void SawaServer::readFile(int socket_fd, uint32_t offset, uint32_t size) {
+    uint8_t *buffer;
     
     screen->debug("[%d] Read %d bytes (0x%x) starting at offset %d\n", socket_fd, size, size, offset);
     
@@ -43,7 +43,7 @@ void SawaServer::readFile(int socket_fd, unsigned int offset, unsigned int size)
     if (!this->checkValidRequest(socket_fd, offset, size)) return;
 
     lseek(fd, offset, SEEK_SET);
-    buffer = new unsigned char[size];
+    buffer = new uint8_t[size];
     read(fd, buffer, size);
     
     screen->debug("[%d] Sending data...\n", socket_fd);
@@ -53,9 +53,8 @@ void SawaServer::readFile(int socket_fd, unsigned int offset, unsigned int size)
     delete [] buffer;
 }
 
-void SawaServer::writeFile(int socket_fd, unsigned char* addr, unsigned int offset, unsigned int size) {
+void SawaServer::writeFile(int socket_fd, uint8_t* addr, uint32_t offset, uint32_t size) {
     char response = SAWA_MSG_OK;
-    unsigned char *buffer;
     screen->debug("[%d] Write %d bytes starting at offset %d\n", socket_fd, size, offset);
 
     // Check that the request is valid
@@ -77,9 +76,9 @@ void SawaServer::writeFile(int socket_fd, unsigned char* addr, unsigned int offs
     screen->error("[%d]... Error %d\n", socket_fd, errno);
 }
 
-void SawaServer::processRequest(int socket_fd, ConnectionThread* thread_info, unsigned char* addr, unsigned int size) {
-    unsigned int offset;
-    unsigned char op;
+void SawaServer::processRequest(int socket_fd, ConnectionThread* thread_info, uint8_t* addr, uint32_t size) {
+    uint32_t offset;
+    uint8_t op;
     
     op = addr[0];
     
@@ -90,11 +89,11 @@ void SawaServer::processRequest(int socket_fd, ConnectionThread* thread_info, un
         return;
     }
     
-    offset = *((unsigned int*)(addr+1));
+    offset = *((uint32_t*)(addr+1));
 
     switch(op) {
         case SAWA_READ:
-            size = *((unsigned int*)(addr+1+sizeof(int)));
+            size = *((uint32_t*)(addr+1+sizeof(int)));
             this->readFile(socket_fd, offset, size);
             thread_info->info[1]++;
             screen->refresh_thread(thread_info, 1);
@@ -111,8 +110,8 @@ void SawaServer::processRequest(int socket_fd, ConnectionThread* thread_info, un
 void SawaServer::readData(ConnectionThread* thread_info) {
     int socket_fd = thread_info->client_sock;
     int n;
-    unsigned int expected_size;
-    unsigned char *buffer_in;
+    uint32_t expected_size;
+    uint8_t *buffer_in;
     
     for (;;) {
     
@@ -122,7 +121,7 @@ void SawaServer::readData(ConnectionThread* thread_info) {
         if (expected_size > 32768) return;
 
         if (expected_size > 0) {
-            buffer_in = new unsigned char[expected_size];
+            buffer_in = new uint8_t[expected_size];
             n = read(socket_fd, buffer_in, expected_size);
     
             if (n < 0) {
@@ -147,7 +146,7 @@ int SawaServer::getFilesystemFile() {
     fd = open(filesystem.c_str(), O_RDWR|O_CREAT, 0700);
     
     nb_bytes = nb_sectors * 512;
-    unsigned char *buffer = new unsigned char[nb_bytes];
+    uint8_t *buffer = new uint8_t[nb_bytes];
     memset(buffer, 0, nb_bytes);
     write(fd, buffer, nb_bytes);
     delete [] buffer;

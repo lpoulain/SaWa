@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 #include <cstddef>
 #include <sys/ioctl.h>
 #include <stdlib.h>
@@ -173,7 +174,7 @@ ThreadPool::~ThreadPool() {
 // Thread serialization
 ////////////////////////////////////////////////////////////
 
-void ThreadPool::serializeThreadStats(unsigned char* buffer) {
+void ThreadPool::serializeThreadStats(uint8_t* buffer) {
     ThreadStat *thread_st = (ThreadStat *)buffer + thread_nb - 1;
     ConnectionThread *thread_info = all_threads;
     int i;
@@ -188,12 +189,12 @@ void ThreadPool::serializeThreadStats(unsigned char* buffer) {
     }
 }
 
-unsigned char *ThreadPool::getThreadStatistics() {
+uint8_t *ThreadPool::getThreadStatistics() {
     int *size;
-    unsigned char *buffer_out;
+    uint8_t *buffer_out;
     
     pthread_mutex_lock(&all_threads_lock);
-        buffer_out = new unsigned char[4 + thread_nb*sizeof(ThreadStat)];
+        buffer_out = new uint8_t[4 + thread_nb*sizeof(ThreadStat)];
         memset(buffer_out, 0, 4 + thread_nb*sizeof(ThreadStat));
         size = (int *)buffer_out;
         *size = thread_nb * sizeof(ThreadStat);

@@ -32,7 +32,7 @@ int index_html_len;
 #define request_message_len 1016
 
 struct request_message {
-    unsigned char data[request_message_len];
+    uint8_t data[request_message_len];
     struct request_message *next;
 };
 
@@ -91,10 +91,8 @@ WebFile *HTTPServer::getFile(char* path) {
 // Process the HTTP request
 // Request 0 if close connection
 // Request 1 if keep alive
-int HTTPServer::processRequest(int socket_fd, request_message* msg, unsigned int size) {
+int HTTPServer::processRequest(int socket_fd, request_message* msg, uint32_t size) {
     struct request_message *tmp_msg = msg;
-    unsigned int offset;
-    unsigned char op;
     char *buffer_out, *buffer_in = (char*)msg;
     char *url;
     int first_line_end = strlen(buffer_in), url_start, url_end, url_length, ext_start, header_size;
@@ -166,7 +164,6 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, unsigned int
 void HTTPServer::readData(ConnectionThread* thread_info) {
     int socket_fd = thread_info->client_sock;
     int n = 1, size=0;
-    unsigned int expected_size;
     struct request_message *top_msg = new request_message();
     memset(top_msg, 0, sizeof(struct request_message));
     struct request_message *msg = top_msg, *tmp_msg;

@@ -24,15 +24,15 @@ public:
 
 class SawaServer : public Server {
     std::string filesystem;
-    unsigned int nb_sectors;
+    uint32_t nb_sectors;
     int fd;
     
-    void dumpMem(unsigned char *addr, int size);
+    void dumpMem(uint8_t *addr, int size);
     void sendInfo(int socket_fd);
-    int checkValidRequest(int socket_fd, unsigned int offset, unsigned int size);
-    void readFile(int socket_fd, unsigned int offset, unsigned int size);
-    void writeFile(int socket_fd, unsigned char *addr, unsigned int offset, unsigned int size);
-    void processRequest(int socket_fd, ConnectionThread *thread_info, unsigned char *addr, unsigned int size);
+    int checkValidRequest(int socket_fd, uint32_t offset, uint32_t size);
+    void readFile(int socket_fd, uint32_t offset, uint32_t size);
+    void writeFile(int socket_fd, uint8_t *addr, uint32_t offset, uint32_t size);
+    void processRequest(int socket_fd, ConnectionThread *thread_info, uint8_t *addr, uint32_t size);
     int getFilesystemFile();
     
 public:
@@ -45,7 +45,7 @@ class HTTPServer : public Server {
     std::map<std::string, WebFile *> cache;
     
     int strnCaseStr(const char *s, const char *find, const int max);
-    int processRequest(int socket_fd, struct request_message *msg, unsigned int size);
+    int processRequest(int socket_fd, struct request_message *msg, uint32_t size);
     struct WebFile *getFile(char *path);
     
 public:

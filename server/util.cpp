@@ -41,13 +41,13 @@ int Util::strnCaseStr(const char *s, const char *find, const int max)
     const char *s_end = s + max;
     
 	if ((c = *find++) != 0) {
-		c = (char)tolower((unsigned char)c);
+		c = (char)tolower((uint8_t)c);
 		len = strlen(find);
 		do {
 			do {
                 sc = *s++;
                 if (s >= s_end) return 0;
-			} while ((char)tolower((unsigned char)sc) != c);
+			} while ((char)tolower((uint8_t)sc) != c);
 		} while (strncasecmp(s, find, len) != 0);
 		s--;
 	}
@@ -55,7 +55,7 @@ int Util::strnCaseStr(const char *s, const char *find, const int max)
     return 1;
 }
 
-void Util::dumpMem(unsigned char *addr, int size) {
+void Util::dumpMem(uint8_t *addr, int size) {
     int i, j=0;
     screen->debug("Received %d bytes\n", size);
     while (1) {

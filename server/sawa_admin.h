@@ -3,7 +3,7 @@ class AdminInterface {
     pthread_t *thread;
     
     void statCommand(int);
-    void processCommand(int, unsigned char *, int);
+    void processCommand(int, uint8_t *, int);
     void readCommand(int);
     static void *connectionHandler(void *);
     

@@ -20,15 +20,15 @@
 extern void ctrl_c_handler(int s);
 
 void AdminInterface::statCommand(int socket_fd) {
-    unsigned char *buffer = pool->getThreadStatistics();
+    uint8_t *buffer = pool->getThreadStatistics();
     int *buffer_size = (int*)buffer;
     
     write(socket_fd, buffer, *buffer_size);
     delete [] buffer;
 }
 
-void AdminInterface::processCommand(int socket_fd, unsigned char *buffer_in, int size) {
-    unsigned char op = buffer_in[0];
+void AdminInterface::processCommand(int socket_fd, uint8_t *buffer_in, int size) {
+    uint8_t op = buffer_in[0];
     
     switch(op) {
         case SAWA_STOP:
@@ -44,7 +44,7 @@ void AdminInterface::processCommand(int socket_fd, unsigned char *buffer_in, int
 
 void AdminInterface::readCommand(int socket_fd) {
     int n, expected_size;
-    unsigned char *buffer_in;
+    uint8_t *buffer_in;
     
     for (;;) {
     
@@ -54,7 +54,7 @@ void AdminInterface::readCommand(int socket_fd) {
         if (expected_size > 1024) return;
 
         if (expected_size > 0) {
-            buffer_in = new unsigned char[expected_size];
+            buffer_in = new uint8_t[expected_size];
             n = read(socket_fd, buffer_in, expected_size);
     
             if (n < 0) {
@@ -69,7 +69,7 @@ void AdminInterface::readCommand(int socket_fd) {
 }
 
 void *AdminInterface::connectionHandler(void *ptr) {
-    int client_sock , c , *new_sock;
+    int client_sock , c;
     AdminInterface *admin = (AdminInterface*)ptr;
     struct sockaddr_in server , client;
     int option = 1;
