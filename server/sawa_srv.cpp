@@ -14,6 +14,7 @@
 #include "display.h"
 #include "thread_pool.h"
 #include "server.h"
+#include "util.h"
 
 void SawaServer::sendInfo(int socket_fd) {
     char buffer_out[4];
@@ -42,9 +43,9 @@ void SawaServer::readFile(int socket_fd, uint32_t offset, uint32_t size) {
     // Check that the request is valid
     if (!this->checkValidRequest(socket_fd, offset, size)) return;
 
-    lseek(fd, offset, SEEK_SET);
+    fseek(fp, offset, SEEK_SET);
     buffer = new uint8_t[size];
-    read(fd, buffer, size);
+    fread(buffer, sizeof(char), size, fp);
     
     screen->debug("[%d] Sending data...\n", socket_fd);
 //    dump_mem(buffer, 32);
@@ -60,8 +61,8 @@ void SawaServer::writeFile(int socket_fd, uint8_t* addr, uint32_t offset, uint32
     // Check that the request is valid
     if (!this->checkValidRequest(socket_fd, offset, size)) return;
     
-    if (lseek(fd, offset, SEEK_SET) >= 0) {
-        if (write(fd, addr, (ssize_t)size) >= 0) {
+    if (fseek(fp, offset, SEEK_SET) >= 0) {
+        if (fwrite(addr, sizeof(char), (ssize_t)size, fp) >= 0) {
             sync();
             
             // Sends OK message
@@ -83,7 +84,9 @@ void SawaServer::processRequest(int socket_fd, ConnectionThread* thread_info, ui
     op = addr[0];
     
     if (op == SAWA_INFO) {
+        // Processs the INFO command
         this->sendInfo(socket_fd);
+        // Updates the thread statistics and update the screen (if appropriate)
         thread_info->info[0]++;
         screen->refresh_thread(thread_info, 0);
         return;
@@ -93,20 +96,25 @@ void SawaServer::processRequest(int socket_fd, ConnectionThread* thread_info, ui
 
     switch(op) {
         case SAWA_READ:
+            // Retrieve the message size and process the READ command
             size = *((uint32_t*)(addr+1+sizeof(int)));
             this->readFile(socket_fd, offset, size);
+            // Updates the thread statistics and update the screen (if appropriate)
             thread_info->info[1]++;
             screen->refresh_thread(thread_info, 1);
             break;
         case SAWA_WRITE:
+            // Retrieve the message size and process the WRITE command
             size -= (1 + sizeof(int));
             this->writeFile(socket_fd, addr + 1 + sizeof(int), offset, size);
+            // Updates the thread statistics and update the screen (if appropriate)
             thread_info->info[2]++;
             screen->refresh_thread(thread_info, 2);
             break;
     }
 }
 
+// Reads data from the network
 void SawaServer::readData(ConnectionThread* thread_info) {
     int socket_fd = thread_info->client_sock;
     int n;
@@ -135,32 +143,39 @@ void SawaServer::readData(ConnectionThread* thread_info) {
     }
 }
 
-int SawaServer::getFilesystemFile() {
+// Opens the filesystem file, creates it if need be
+FILE *SawaServer::getFilesystemFile() {
     int nb_bytes;
-    int fd;
+    FILE *fp;
     
-    fd= open(filesystem.c_str(), O_RDWR, 0700);
-    if (fd > 0) return fd;
+    fp= fopen(filesystem.c_str(), "r+");
+    if (fp != NULL) return fp;
     
     screen->debug("Filesystem file does not exist, creating it...\n");
-    fd = open(filesystem.c_str(), O_RDWR|O_CREAT, 0700);
+    fp = fopen(filesystem.c_str(), "w+");
+    
+    if (fp == NULL) {
+        Util::setDebugInfo(errno);
+        Util::setDebugInfo(filesystem);
+        throw FAILURE_OPEN_FILE;
+    }
     
     nb_bytes = nb_sectors * 512;
     uint8_t *buffer = new uint8_t[nb_bytes];
     memset(buffer, 0, nb_bytes);
-    write(fd, buffer, nb_bytes);
+    fwrite(buffer, sizeof(char), nb_bytes, fp);
     delete [] buffer;
     
-    return fd;
+    return fp;
 }
 
 SawaServer::SawaServer() : Server(5000) {
     this->nb_sectors = 2048;
     this->filesystem = "./filesystem";
     
-    fd = this->getFilesystemFile();
+    fp = this->getFilesystemFile();
 }
 
 SawaServer::~SawaServer() {
-    close(fd);
+    fclose(fp);
 }

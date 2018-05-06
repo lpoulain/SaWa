@@ -48,10 +48,10 @@ public:
         this->size = file_size;
         this->content = new char[file_size];
     
-        std::FILE *fp = std::fopen(path, "r");
-        std::fseek(fp, 0, SEEK_SET);
-        std::fread(this->content, sizeof(char), this->size, fp);
-        std::fclose(fp);        
+        FILE *fp = fopen(path, "r");
+        fseek(fp, 0, SEEK_SET);
+        fread(this->content, sizeof(char), this->size, fp);
+        fclose(fp);        
     }
     
     ~WebFile() {
@@ -88,23 +88,13 @@ WebFile *HTTPServer::getFile(char* path) {
     return the_file;
 }
 
-// Process the HTTP request
-// Request 0 if close connection
-// Request 1 if keep alive
-int HTTPServer::processRequest(int socket_fd, request_message* msg, uint32_t size) {
-    struct request_message *tmp_msg = msg;
-    char *buffer_out, *buffer_in = (char*)msg;
-    char *url;
-    int first_line_end = strlen(buffer_in), url_start, url_end, url_length, ext_start, header_size;
-    int keep_alive = 0;
-    WebFile *the_file;
+bool HTTPServer::isRequestValid(char *buffer_in) {
+    return strncmp(buffer_in, "GET /", 5) != 0;
+}
 
-    // Analyze the HTTP request
-    if (strncmp(buffer_in, "GET /", 5)) {
-        write(socket_fd, HTTP_500, HTTP_500_len);
-        delete [] buffer_in;
-        return 0;
-    }
+char *HTTPServer::parseUrl(char *buffer_in) {
+    char *url;
+    int first_line_end = strlen(buffer_in), url_start, url_end, url_length;
     
     url_start = 4;
     url_end = 5;
@@ -127,6 +117,32 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, uint32_t siz
     }
         
     url[url_length + root_dir_len] = 0;
+    
+    return url;
+}
+
+// Process the HTTP request
+// Request 0 if close connection
+// Request 1 if keep alive
+int HTTPServer::processRequest(int socket_fd, request_message* msg, uint32_t size) {
+    struct request_message *tmp_msg = msg;
+    char *buffer_out, *buffer_in = (char*)msg;
+    char *url;
+    int header_size;
+    int keep_alive = 0;
+    WebFile *the_file;
+
+    // If the HTTP request is not valid, return an HTTP error 500
+    if (!this->isRequestValid(buffer_in)) {
+        write(socket_fd, HTTP_500, HTTP_500_len);
+        delete [] buffer_in;
+        return 0;
+    }
+    
+    // Retrieves the URL from the request
+    url = this->parseUrl(buffer_in);
+    
+    // Checks whether the connection should be kept alive
     keep_alive = Util::strnCaseStr(buffer_in, "Connection: Keep-Alive", request_message_len);
     
     // Analysis over. Processing the request

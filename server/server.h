@@ -25,7 +25,7 @@ public:
 class SawaServer : public Server {
     std::string filesystem;
     uint32_t nb_sectors;
-    int fd;
+    FILE *fp;
     
     void dumpMem(uint8_t *addr, int size);
     void sendInfo(int socket_fd);
@@ -33,7 +33,7 @@ class SawaServer : public Server {
     void readFile(int socket_fd, uint32_t offset, uint32_t size);
     void writeFile(int socket_fd, uint8_t *addr, uint32_t offset, uint32_t size);
     void processRequest(int socket_fd, ConnectionThread *thread_info, uint8_t *addr, uint32_t size);
-    int getFilesystemFile();
+    FILE *getFilesystemFile();
     
 public:
     SawaServer();
@@ -44,7 +44,8 @@ public:
 class HTTPServer : public Server {
     std::map<std::string, WebFile *> cache;
     
-    int strnCaseStr(const char *s, const char *find, const int max);
+    bool isRequestValid(char *buffer_in);
+    char *parseUrl(char *buffer_in);
     int processRequest(int socket_fd, struct request_message *msg, uint32_t size);
     struct WebFile *getFile(char *path);
     

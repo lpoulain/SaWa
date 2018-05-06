@@ -9,9 +9,14 @@
 using namespace std;
 
 int Util::debug_int;
+string Util::debug_str;
 
 void Util::setDebugInfo(int info) {
     debug_int = info;
+}
+
+void Util::setDebugInfo(string info) {
+    debug_str = info;
 }
 
 void Util::displayError(int failure_code) {
@@ -27,6 +32,9 @@ void Util::displayError(int failure_code) {
             break;
         case FAILURE_MUTEX_INIT:
             cout << "Error: cannot initialize mutex" << endl;
+            break;
+        case FAILURE_OPEN_FILE:
+            cout << "Error: cannot open file '" << debug_str << "' (error=" << debug_int << ")" << endl;
             break;
         default:
             cout << "Error #" << failure_code << endl;

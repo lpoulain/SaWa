@@ -12,6 +12,7 @@
 #define FAILURE_BIND            0x101
 #define FAILURE_ACCEPT          0x102
 #define FAILURE_MUTEX_INIT      0x103
+#define FAILURE_OPEN_FILE       0x104
 
 class ConnectionThread;
 
