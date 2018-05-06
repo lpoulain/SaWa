@@ -65,14 +65,17 @@ void Server::start() {
     }    
 }
 
-Server::~Server() {
+void Server::stop() {
+    shutdown(socket_desc, SHUT_RDWR);
+    
     delete admin;
     delete pool;
     
-    shutdown(socket_desc, SHUT_RDWR);
-    
     screen->cleanup();
     delete screen;    
+}
+
+Server::~Server() {
 }
 
 Server *server;

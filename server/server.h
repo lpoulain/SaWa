@@ -19,6 +19,7 @@ public:
     virtual ~Server();
     virtual void readData(ConnectionThread *thread_info) = 0;
     void start();
+    void stop();
 };
 
 class SawaServer : public Server {

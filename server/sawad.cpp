@@ -28,7 +28,9 @@ AdminInterface *admin;
 /////////////////////////////////////////////////////////////////////////////////////
 
 void ctrl_c_handler(int s) {
-    delete server;
+    server->stop();
+
+//    delete server;
     exit(0);
 }
 

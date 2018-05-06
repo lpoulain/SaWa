@@ -14,6 +14,7 @@
 #include "display.h"
 #include "thread_pool.h"
 #include "server.h"
+#include "util.h"
 
 using namespace std;
 
@@ -29,27 +30,6 @@ int root_dir_len;
 int index_html_len;
 
 #define request_message_len 1016
-
-int strncasestr(const char *s, const char *find, const int max)
-{
-	char c, sc = 0;
-	size_t len;
-    const char *s_end = s + max;
-    
-	if ((c = *find++) != 0) {
-		c = (char)tolower((unsigned char)c);
-		len = strlen(find);
-		do {
-			do {
-                sc = *s++;
-                if (s >= s_end) return 0;
-			} while ((char)tolower((unsigned char)sc) != c);
-		} while (strncasecmp(s, find, len) != 0);
-		s--;
-	}
-
-    return 1;
-}
 
 struct request_message {
     unsigned char data[request_message_len];
@@ -138,7 +118,7 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, unsigned int
     }
         
     url[url_length + root_dir_len] = 0;
-    keep_alive = strncasestr(buffer_in, "Connection: Keep-Alive", request_message_len);
+    keep_alive = Util::strnCaseStr(buffer_in, "Connection: Keep-Alive", request_message_len);
     
     // Analysis over. Processing the request
     screen->debug("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
