@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <sys/time.h>
 #include <time.h>
+#include <pthread.h>
 #include "sawa.h"
 #include "display.h"
 #include "thread_pool.h"
@@ -18,6 +19,12 @@ Display *screen;
 
 class DisplayDefault : public Display {
     string info_label[3];
+    // In order to avoid display issues, only one thread can update the screen at a time
+    // Hence the need of a mutex
+    // This of course slows down the overall performance
+    // But the primary goal of the default display mode is not performance
+    // The -daemon or -quiet options are better suited for that
+    pthread_mutex_t display_lock;
     
 public:    
     void init() override {
@@ -49,9 +56,11 @@ public:
 
         memset(buffer, 6, 0);
         sprintf(buffer, "%d", thread_info->info[i]);
-        mvaddstr(4+i, thread_info->nb * 6 + 14, buffer);
-
-        refresh();
+        
+        pthread_mutex_lock(&display_lock);
+            mvaddstr(4+i, thread_info->nb * 6 + 14, buffer);
+            refresh();
+        pthread_mutex_unlock(&display_lock);
     }
 
     // Displays the thread statistics
@@ -61,17 +70,21 @@ public:
 
         memset(buffer, 6, 0);
         sprintf(buffer, "%d", thread_info->nb_connections);
-        mvaddstr(3, thread_info->nb * 6 + 14, buffer);
-
-        refresh();
+        
+        pthread_mutex_lock(&display_lock);
+            mvaddstr(3, thread_info->nb * 6 + 14, buffer);
+            refresh();
+        pthread_mutex_unlock(&display_lock);    
     }
 
     void status(ConnectionThread *thread_info, int is_on) override {
+        pthread_mutex_lock(&display_lock);
         if (is_on)
             mvaddstr(2, thread_info->nb * 6 + 14, "Y");
         else
             mvaddstr(2, thread_info->nb * 6 + 14, ".");
         refresh();
+        pthread_mutex_unlock(&display_lock);
     }
 
     // Displays the thread number
@@ -103,13 +116,21 @@ public:
         vsprintf(buffer, format, argptr);
         va_end(argptr);
 
+        pthread_mutex_lock(&display_lock);
         mvaddstr(6, 0, buffer);
+        refresh();
+        pthread_mutex_unlock(&display_lock);
     }
     
     DisplayDefault() {
         info_label[0] = "Info       :";
         info_label[1] = "Reads      :";
         info_label[2] = "Writes     :";
+        
+        if (pthread_mutex_init(&display_lock, NULL) != 0)
+        {
+            throw FAILURE_MUTEX_INIT;
+        }
     }
 };
 
