@@ -30,7 +30,7 @@ ThreadPool *pool;
 
 void *connection_handler(void *ti)
 {
-    struct ConnectionThread *thread_info = (struct ConnectionThread *)ti;
+    ConnectionThread *thread_info = (ConnectionThread *)ti;
     int nSig;
 
     while (1) {
@@ -62,7 +62,7 @@ ConnectionThread::ConnectionThread(int client_sock) {
 }
 
 // There is no idle thread, so we create a new one
-struct ConnectionThread *ThreadPool::newThread(int client_sock) {
+ConnectionThread *ThreadPool::newThread(int client_sock) {
     ConnectionThread *thread_info = new ConnectionThread(client_sock);
     
     pthread_mutex_lock(&all_threads_lock);
@@ -97,7 +97,7 @@ void ThreadPool::releaseThread(ConnectionThread* thread_info) {
 
 // Reuse an idle thread
 ConnectionThread *ThreadPool::reuseThread(int client_sock) {
-    struct ConnectionThread *thread_info = nullptr;
+    ConnectionThread *thread_info = nullptr;
 
     // Is there any idle thread?
     if (this->idle_threads == nullptr) return nullptr;
@@ -122,7 +122,7 @@ ConnectionThread *ThreadPool::reuseThread(int client_sock) {
 ////////////////////////////////////////////////////////
 void ThreadPool::handleNewConnection(int client_sock) {
     // Try to reuse an idle thread
-    struct ConnectionThread *thread_info = this->reuseThread(client_sock);
+    ConnectionThread *thread_info = this->reuseThread(client_sock);
     // If there is no idle thread, create a new one
     if (thread_info == nullptr) this->newThread(client_sock);
 }
@@ -148,7 +148,7 @@ ThreadPool::ThreadPool() {
 }
 
 ThreadPool::~ThreadPool() {
-    struct ConnectionThread *thread_info;
+    ConnectionThread *thread_info;
     int nb_conn = 0;
 
     while (all_threads != nullptr) {

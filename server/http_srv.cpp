@@ -63,7 +63,7 @@ public:
 // It is a very simplistic cache which does not release anything *ever*
 map<string, WebFile *> cache;
 
-struct WebFile *HTTPServer::getFile(char* path) {
+WebFile *HTTPServer::getFile(char* path) {
     struct stat st;
     int fd, file_size, n;
     WebFile *the_file;

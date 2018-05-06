@@ -71,7 +71,6 @@ void AdminInterface::readCommand(int socket_fd) {
 void *AdminInterface::connectionHandler(void *ptr) {
     int client_sock , c , *new_sock;
     AdminInterface *admin = (AdminInterface*)ptr;
-    struct connection *conn;
     struct sockaddr_in server , client;
     int option = 1;
      
