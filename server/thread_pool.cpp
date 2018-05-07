@@ -154,7 +154,7 @@ ThreadPool::~ThreadPool() {
 
     while (all_threads != nullptr) {
         thread_info = all_threads;
-        
+
         pthread_detach(thread_info->thread);
         pthread_kill(thread_info->thread, SIGALRM);
 
@@ -174,16 +174,22 @@ ThreadPool::~ThreadPool() {
 // Thread serialization
 ////////////////////////////////////////////////////////////
 
+void ThreadStat::loadFrom(ConnectionThread *thread_info) {
+    int i;
+    
+    this->nb_connections = thread_info->nb_connections;
+    for (i=0; i<3; i++)
+        this->info[i] = thread_info->info[i];
+    this->active = (thread_info->client_sock >= 0);    
+}
+
 void ThreadPool::serializeThreadStats(uint8_t* buffer) {
     ThreadStat *thread_st = (ThreadStat *)buffer + thread_nb - 1;
     ConnectionThread *thread_info = all_threads;
     int i;
     
     while (thread_info != nullptr) {
-        thread_st->nb_connections = thread_info->nb_connections;
-        for (i=0; i<3; i++)
-            thread_st->info[i] = thread_info->info[i];
-        thread_st->active = (thread_info->client_sock >= 0);
+        thread_st->loadFrom(thread_info);
         thread_st--;
         thread_info = thread_info->next_all;
     }

@@ -23,14 +23,12 @@ using namespace std;
 
 int debug_flag = 0;
 
-AdminInterface *admin;
-
 /////////////////////////////////////////////////////////////////////////////////////
 
 void ctrl_c_handler(int s) {
     server->stop();
 
-//    delete server;
+    delete server;
     exit(0);
 }
 

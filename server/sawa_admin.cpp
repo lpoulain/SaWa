@@ -123,5 +123,9 @@ AdminInterface::~AdminInterface() {
     screen->debug("Shutting down admin interface\n");
 
     shutdown(this->socket_desc, SHUT_RDWR);
+    
+    pthread_detach(pthread_self());
     delete this->thread;
 }
+
+AdminInterface *admin;

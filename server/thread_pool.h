@@ -19,10 +19,13 @@ public:
     ConnectionThread(int client_sock);
 };
 
-struct ThreadStat {
+class ThreadStat {
     int nb_connections;
     int info[3];
     char active;
+    
+public:
+    void loadFrom(ConnectionThread *thread_info);
 };
 
 class ThreadPool {

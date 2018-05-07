@@ -135,7 +135,7 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, uint32_t siz
     // If the HTTP request is not valid, return an HTTP error 500
     if (!this->isRequestValid(buffer_in)) {
         write(socket_fd, HTTP_500, HTTP_500_len);
-        delete [] buffer_in;
+        delete msg;
         return 0;
     }
     

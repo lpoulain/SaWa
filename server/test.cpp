@@ -6,7 +6,6 @@
 
 using namespace std;
 
-AdminInterface *admin;
 void ctrl_c_handler(int s) {}
 int debug_flag;
 
