@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include <string.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -64,17 +63,17 @@ public:
 map<string, WebFile *> cache;
 
 WebFile *HTTPServer::getFile(char* path) {
-    struct stat st;
-    int fd, file_size, n;
     WebFile *the_file;
-    
+    int file_size;
+    cout << "test" << endl;
     // Check if the file is cached. If it is, return it
     the_file = cache[path];
     if (the_file != nullptr) return the_file;
 
     // If not, find the file size
-    stat(path, &st);
-    file_size = st.st_size;
+    ifstream in(path, std::ifstream::ate | std::ifstream::binary);
+    file_size = in.tellg(); 
+    cout << "[" << file_size << "]" << endl;
 
     // The file doesn't exist
     if (file_size == 0) return nullptr;
@@ -89,7 +88,7 @@ WebFile *HTTPServer::getFile(char* path) {
 }
 
 bool HTTPServer::isRequestValid(char *buffer_in) {
-    return strncmp(buffer_in, "GET /", 5) != 0;
+    return strncmp(buffer_in, "GET /", 5) == 0;
 }
 
 char *HTTPServer::parseUrl(char *buffer_in) {
@@ -134,6 +133,7 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, uint32_t siz
 
     // If the HTTP request is not valid, return an HTTP error 500
     if (!this->isRequestValid(buffer_in)) {
+        Util::dumpMem((uint8_t*)msg, 32);
         write(socket_fd, HTTP_500, HTTP_500_len);
         delete msg;
         return 0;
@@ -179,11 +179,10 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, uint32_t siz
 
 void HTTPServer::readData(ConnectionThread* thread_info) {
     int socket_fd = thread_info->client_sock;
-    int n = 1, size=0;
+    int n = 1;
     struct request_message *top_msg = new request_message();
     memset(top_msg, 0, sizeof(struct request_message));
     struct request_message *msg = top_msg, *tmp_msg;
-    int keep_alive;
 
     while (1) {
         n = read(socket_fd, (char *)msg, request_message_len);
@@ -193,7 +192,7 @@ void HTTPServer::readData(ConnectionThread* thread_info) {
             return;
         }
         screen->debug("[Socket %d] %d bytes request\n", socket_fd, n);
-        
+
         // If this is the end of the message, send it
         if (n < request_message_len || strcmp((char*)msg + request_message_len - 4, "\r\n\r\n")) {
             // If the connection is not Keep-Alive, break the connection

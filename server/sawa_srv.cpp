@@ -1,8 +1,6 @@
 #include <fstream>
 #include <string.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <search.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h> 
@@ -17,7 +15,6 @@
 #include "util.h"
 
 void SawaServer::sendInfo(int socket_fd) {
-    char buffer_out[4];
     screen->debug("INFO command received\n");
     write(socket_fd, &nb_sectors, sizeof(int));
     screen->debug("INFO sent\n");

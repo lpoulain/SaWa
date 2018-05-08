@@ -63,19 +63,52 @@ int Util::strnCaseStr(const char *s, const char *find, const int max)
     return 1;
 }
 
+char ascii[256] = {
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.',
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.',
+    ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
+    '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+    'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_',
+    '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '.',
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.',
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.',
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.',
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.',
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.',
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.',
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.',
+    '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'
+};
+
 void Util::dumpMem(uint8_t *addr, int size) {
     int i, j=0;
+    char ascii_row[16];
+    memset(ascii_row, ' ', 16);
+    
     screen->debug("Received %d bytes\n", size);
     while (1) {
+        if (j >= size) return;
         printf("%04x ", j);
         for (i=0; i<16; i++) {
             if (j >= size) {
-                printf("\n");
+                printf("   %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n",
+                        ascii_row[0], ascii_row[1], ascii_row[2], ascii_row[3],
+                        ascii_row[4], ascii_row[5], ascii_row[6], ascii_row[7],
+                        ascii_row[8], ascii_row[9], ascii_row[10], ascii_row[11],
+                        ascii_row[12], ascii_row[13], ascii_row[14], ascii_row[15]);
                 return;
             }
+            ascii_row[i] = ascii[addr[j]];
             printf(" %02x", addr[j]);
             j++;
         }
-        printf("\n");
+        printf("   %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n",
+                ascii_row[0], ascii_row[1], ascii_row[2], ascii_row[3],
+                ascii_row[4], ascii_row[5], ascii_row[6], ascii_row[7],
+                ascii_row[8], ascii_row[9], ascii_row[10], ascii_row[11],
+                ascii_row[12], ascii_row[13], ascii_row[14], ascii_row[15]);
+        memset(ascii_row, ' ', 16);
     }
 }
