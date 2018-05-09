@@ -2,10 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/time.h>
-#include <sys/types.h>
+#include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pthread.h>
+#include <arpa/inet.h>
 
 #define SAWA_INFO  0x01
 #define SAWA_READ  0x02
@@ -17,6 +21,7 @@
 #define SAWA_MSG_ERR    0x43
 #define SAWA_MSG_NOAUTH 0x44
 
+int sawa_client_init(int port);
 
 int server_port = 5000;
 int admin_port = 5001;
@@ -65,7 +70,7 @@ unsigned char *send_read_cmd(int socket_fd, int offset, int payload_size) {
     char response;
     int n;
     unsigned char buffer_out[12];
-    unsigned char *buffer_in = malloc(payload_size + 1);
+    unsigned char *buffer_in = new unsigned char[payload_size + 1];
     int *int_ptr = (int*)(buffer_out);
 
     *int_ptr = 1 +sizeof(int)*2;
@@ -182,7 +187,7 @@ void send_stat_cmd() {
     
     printf("There are %d threads\n", nb_threads);
     printf("Thread# Active? #Conn   Info    Reads   Writes\n");
-    buffer_in = malloc(size);
+    buffer_in = new unsigned char[size];
     thread_stats = (struct thread_stat *)buffer_in;
 
     read(socket_fd, buffer_in, size);
@@ -197,7 +202,7 @@ void send_stat_cmd() {
                thread_stats[i].info[2]);
     }
     
-    free(buffer_in);
+    delete [] buffer_in;
 }
 
 void sawa_send_command(int socket_fd, int op, int offset, int nb_bytes) {
@@ -208,7 +213,7 @@ void sawa_send_command(int socket_fd, int op, int offset, int nb_bytes) {
         buffer = send_read_cmd(socket_fd, offset, nb_bytes);
         if (buffer != NULL) {
             dump_mem(buffer, nb_bytes);
-            free(buffer);
+            delete [] buffer;
         }
     }
     else if (op == SAWA_WRITE) {
@@ -249,7 +254,7 @@ static atomic_t test_counter;
 static int test_nb_requests;
 
 void *sawa_thread_test(void *arg) {
-    unsigned char *buffer = malloc(4096);
+    unsigned char *buffer = new unsigned char[4096];
     int i, j;
     long thread_id = (long)arg;
     int socket_fd;
@@ -258,7 +263,7 @@ void *sawa_thread_test(void *arg) {
     
     sawa_send_command(socket_fd, SAWA_INFO, 0, 0);
     
-    unsigned char *buffer_out = malloc(4096);
+    unsigned char *buffer_out = new unsigned char[4096];
     unsigned char *buffer_in;
     
     for (i=0; i<256; i++) {
@@ -271,18 +276,17 @@ void *sawa_thread_test(void *arg) {
         if (strncmp((const char *)buffer_in, (const char *)buffer_out, 4096) != 0)
             printf("Error page %d, read/write operation failed\n", i);
         
-        free(buffer_in);
+        delete [] buffer_in;
     }
 
     close(socket_fd);
-    free(buffer);
+    delete [] buffer;
     
     printf("End thread %ld\n", thread_id);
     atomic_dec(&test_counter);
 }
 
-int timeval_subtract (result, x, y)
-     struct timeval *result, *x, *y;
+int timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y)
 {
   /* Perform the carry for the later subtraction by updating y. */
   if (x->tv_usec < y->tv_usec) {
@@ -306,7 +310,7 @@ int timeval_subtract (result, x, y)
 }
 
 void sawa_test(int nb_threads) {
-    pthread_t *tid = malloc(sizeof(pthread_t)*nb_threads);
+    pthread_t *tid = new pthread_t();
     int i;
     debug = 0;
     struct timeval starttime, endtime, timediff;
@@ -328,7 +332,7 @@ void sawa_test(int nb_threads) {
     timeval_subtract(&timediff,&endtime,&starttime);
     printf("Test completed in %d seconds and %d ms\n", (int)timediff.tv_sec, (int)timediff.tv_usec / 1000);
     
-    free(tid);
+    delete tid;
 }
 
 ////////////////////////////////////////////////////////////////////////////
