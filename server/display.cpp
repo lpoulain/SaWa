@@ -39,11 +39,9 @@ public:
         clear();
 
         mvaddstr(0, 0, buffer);
-        mvaddstr(1, 0, "Thread #   :");
-        mvaddstr(2, 0, "Active?    :");
-        mvaddstr(3, 0, "Connections:");
+        mvaddstr(1, 0, "Thread# Active? #Conn   Info    Reads   Writes");
         for (i=0; i<3; i++) {
-            if (!info_label[i].empty()) mvaddstr(4+i, 0, info_label[i].c_str());
+            if (!info_label[i].empty()) mvaddstr(1, 24 + i*8, info_label[i].c_str());
         }
 
         refresh();
@@ -58,7 +56,7 @@ public:
         sprintf(buffer, "%d", thread_info->info[i]);
         
         pthread_mutex_lock(&display_lock);
-            mvaddstr(4+i, thread_info->nb * 6 + 14, buffer);
+            mvaddstr(thread_info->nb + 2, 24 + i*8, buffer);
             refresh();
         pthread_mutex_unlock(&display_lock);
     }
@@ -72,17 +70,17 @@ public:
         sprintf(buffer, "%d", thread_info->nb_connections);
         
         pthread_mutex_lock(&display_lock);
-            mvaddstr(3, thread_info->nb * 6 + 14, buffer);
+            mvaddstr(thread_info->nb + 2, 16, buffer);
             refresh();
-        pthread_mutex_unlock(&display_lock);    
+        pthread_mutex_unlock(&display_lock);
     }
 
     void status(ConnectionThread *thread_info, int is_on) override {
         pthread_mutex_lock(&display_lock);
         if (is_on)
-            mvaddstr(2, thread_info->nb * 6 + 14, "Y");
+            mvaddstr(thread_info->nb + 2, 8, "Y");
         else
-            mvaddstr(2, thread_info->nb * 6 + 14, ".");
+            mvaddstr(thread_info->nb + 2, 8, ".");
         refresh();
         pthread_mutex_unlock(&display_lock);
     }
@@ -93,7 +91,7 @@ public:
         memset(buffer, 6, 0);
         sprintf(buffer, "%d", thread_info->nb);
 
-        mvaddstr(1, thread_info->nb * 6 + 14, buffer);
+        mvaddstr(thread_info->nb + 2, 0, buffer);
 
         this->thread_update(thread_info);
         this->status(thread_info, 1);
@@ -123,9 +121,9 @@ public:
     }
     
     DisplayDefault() {
-        info_label[0] = "Info       :";
-        info_label[1] = "Reads      :";
-        info_label[2] = "Writes     :";
+        info_label[0] = "Info";
+        info_label[1] = "Reads";
+        info_label[2] = "Writes";
         
         if (pthread_mutex_init(&display_lock, NULL) != 0)
         {
