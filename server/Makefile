@@ -2,7 +2,7 @@ CC=g++
 CFLAGS=-I. -std=gnu++11
 DEPS = 
 SAWAD_OBJ = sawad.o http_srv.o sawa_srv.o thread_pool.o display.o sawa_admin.o server.o util.o
-SAWA_CLIENT_OBJ = sawa_client.o
+SAWA_CLIENT_OBJ = sawa_client.o sawa_client_interface.o
 TEST_OBJ = test.o test_helper.o http_srv.o sawa_srv.o thread_pool.o display.o sawa_admin.o server.o util.o
 
 %.o: %.cpp $(DEPS)
