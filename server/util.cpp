@@ -85,6 +85,9 @@ char ascii[256] = {
 void Util::dumpMem(uint8_t *addr, int size) {
     int i, j=0;
     char ascii_row[16];
+    
+    if (debug_flag == 0) return;
+    
     memset(ascii_row, ' ', 16);
     
     screen->debug("Received %d bytes\n", size);

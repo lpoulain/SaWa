@@ -46,7 +46,7 @@ class HTTPServer : public Server {
     
     bool isRequestValid(char *buffer_in);
     char *parseUrl(char *buffer_in);
-    int processRequest(int socket_fd, struct request_message *msg, uint32_t size);
+    int processRequest(int socket_fd, ConnectionThread *thread_info, struct request_message *msg, uint32_t size);
     struct WebFile *getFile(char *path);
     
 public:

@@ -65,7 +65,7 @@ map<string, WebFile *> cache;
 WebFile *HTTPServer::getFile(char* path) {
     WebFile *the_file;
     int file_size;
-    cout << "test" << endl;
+
     // Check if the file is cached. If it is, return it
     the_file = cache[path];
     if (the_file != nullptr) return the_file;
@@ -73,10 +73,9 @@ WebFile *HTTPServer::getFile(char* path) {
     // If not, find the file size
     ifstream in(path, std::ifstream::ate | std::ifstream::binary);
     file_size = in.tellg(); 
-    cout << "[" << file_size << "]" << endl;
 
     // The file doesn't exist
-    if (file_size == 0) return nullptr;
+    if (file_size <= 0) return nullptr;
 
     // The file exists, loads it in memory
     the_file = new WebFile(path, file_size);
@@ -123,7 +122,7 @@ char *HTTPServer::parseUrl(char *buffer_in) {
 // Process the HTTP request
 // Request 0 if close connection
 // Request 1 if keep alive
-int HTTPServer::processRequest(int socket_fd, request_message* msg, uint32_t size) {
+int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, request_message* msg, uint32_t size) {
     struct request_message *tmp_msg = msg;
     char *buffer_out, *buffer_in = (char*)msg;
     char *url;
@@ -163,6 +162,9 @@ int HTTPServer::processRequest(int socket_fd, request_message* msg, uint32_t siz
         write(socket_fd, HTTP_404, HTTP_404_len);
         return 0;
     }
+
+    thread_info->info[1]++;
+    screen->refresh_thread(thread_info, 1);
     
     // Otherwise, write the HTTP headers
     buffer_out = new char[200];
@@ -196,7 +198,7 @@ void HTTPServer::readData(ConnectionThread* thread_info) {
         // If this is the end of the message, send it
         if (n < request_message_len || strcmp((char*)msg + request_message_len - 4, "\r\n\r\n")) {
             // If the connection is not Keep-Alive, break the connection
-            if (!this->processRequest(socket_fd, top_msg, n)) return;
+            if (!this->processRequest(socket_fd, thread_info, top_msg, n)) return;
             
             // Otherwise be ready for another message
             top_msg = new request_message();
