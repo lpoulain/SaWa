@@ -28,6 +28,10 @@ int HTTP_500_len;
 int root_dir_len;
 int index_html_len;
 
+#define HTTP_200_COL    0
+#define HTTP_404_COL    1
+#define HTTP_500_COL    2
+
 #define request_message_len 1016
 
 struct request_message {
@@ -132,6 +136,7 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
 
     // If the HTTP request is not valid, return an HTTP error 500
     if (!this->isRequestValid(buffer_in)) {
+        updateScreen(thread_info, HTTP_500_COL);
         Util::dumpMem((uint8_t*)msg, 32);
         write(socket_fd, HTTP_500, HTTP_500_len);
         delete msg;
@@ -159,12 +164,12 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     
     // If the file doesn't exist, return an HTTP 404 message
     if (!the_file) {
+        updateScreen(thread_info, HTTP_404_COL);
         write(socket_fd, HTTP_404, HTTP_404_len);
         return 0;
     }
 
-    thread_info->info[1]++;
-    screen->refresh_thread(thread_info, 1);
+    updateScreen(thread_info, HTTP_200_COL);
     
     // Otherwise, write the HTTP headers
     buffer_out = new char[200];

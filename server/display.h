@@ -3,7 +3,7 @@
 #define DISPLAY_DAEMON  0x03
 #define DISPLAY_QUIET   0x04
 
-void select_display(int);
+void select_display(int, bool);
 
 class ConnectionThread;
 

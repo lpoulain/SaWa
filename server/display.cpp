@@ -39,7 +39,7 @@ public:
         clear();
 
         mvaddstr(0, 0, buffer);
-        mvaddstr(1, 0, "Thread# Active? #Conn   Info    Reads   Writes");
+        mvaddstr(1, 0, "Thread# Active? #Conn");
         for (i=0; i<3; i++) {
             if (!info_label[i].empty()) mvaddstr(1, 24 + i*8, info_label[i].c_str());
         }
@@ -120,10 +120,17 @@ public:
         pthread_mutex_unlock(&display_lock);
     }
     
-    DisplayDefault() {
-        info_label[0] = "Info";
-        info_label[1] = "Reads";
-        info_label[2] = "Writes";
+    DisplayDefault(bool http) {
+        if (http) {
+            info_label[0] = "200";
+            info_label[1] = "404";
+            info_label[2] = "500";
+        }
+        else {
+            info_label[0] = "Info";
+            info_label[1] = "Reads";
+            info_label[2] = "Writes";
+        }
         
         if (pthread_mutex_init(&display_lock, NULL) != 0)
         {
@@ -251,10 +258,10 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////////
 
-void select_display(int display_code) {
+void select_display(int display_code, bool http) {
     switch(display_code) {
         case DISPLAY_DEFAULT:
-            screen = new DisplayDefault();
+            screen = new DisplayDefault(http);
             break;
         case DISPLAY_DEBUG:
             screen = new DisplayDebug();
@@ -266,6 +273,6 @@ void select_display(int display_code) {
             screen = new DisplayQuiet();
             break;
         default:
-            screen = new DisplayDefault();
+            screen = new DisplayDefault(http);
     }
 }

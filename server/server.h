@@ -18,6 +18,7 @@ public:
     Server(int port);
     virtual ~Server();
     virtual void readData(ConnectionThread *thread_info) = 0;
+    void updateScreen(ConnectionThread *thread_info, int idx);
     void start();
     void stop();
 };

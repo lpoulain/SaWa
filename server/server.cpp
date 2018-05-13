@@ -78,4 +78,9 @@ void Server::stop() {
 Server::~Server() {
 }
 
+void Server::updateScreen(ConnectionThread* thread_info, int idx) {
+    thread_info->info[idx]++;
+    screen->refresh_thread(thread_info, idx);
+}
+
 Server *server;

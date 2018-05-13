@@ -86,22 +86,22 @@ void start_as_daemon() {
 }
 
 int main(int argc, char *argv[]) {
-    int daemon = 0;
-    int http = 0;
-    int quiet = 0;
+    bool daemon = false;
+    bool http = false;
+    bool quiet = false;
     int i, display_code;
     
     set_ctrl_c_handler();
 
     for (i=1; i<argc; i++) {
-        if (!strcmp(argv[i], "-daemon")) daemon = 1;
+        if (!strcmp(argv[i], "-daemon")) daemon = true;
         if (!strcmp(argv[i], "-debug")) debug_flag = 1;
-        if (!strcmp(argv[i], "-quiet")) quiet = 1;
+        if (!strcmp(argv[i], "-quiet")) quiet = true;
         if (!strcmp(argv[i], "-help")) {
             cout << "Usage: " << argv[0] << " [-daemon] [-http]\n" << endl;
             return 0;
         }
-        if (!strcmp(argv[i], "-http")) http = 1;
+        if (!strcmp(argv[i], "-http")) http = true;
     }
 
     try {
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
             display_code = DISPLAY_QUIET;
         else
             display_code = DISPLAY_DEFAULT;
-        select_display(display_code);
+        select_display(display_code, http);
         
         if (http)
             server = new HTTPServer();

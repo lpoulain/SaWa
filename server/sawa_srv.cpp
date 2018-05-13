@@ -14,6 +14,10 @@
 #include "server.h"
 #include "util.h"
 
+#define SAWA_INFO_COL   0
+#define SAWA_READ_COL   1
+#define SAWA_WRITE_COL  2
+
 void SawaServer::sendInfo(int socket_fd) {
     screen->debug("INFO command received\n");
     write(socket_fd, &nb_sectors, sizeof(int));
@@ -84,8 +88,7 @@ void SawaServer::processRequest(int socket_fd, ConnectionThread* thread_info, ui
         // Processs the INFO command
         this->sendInfo(socket_fd);
         // Updates the thread statistics and update the screen (if appropriate)
-        thread_info->info[0]++;
-        screen->refresh_thread(thread_info, 0);
+        updateScreen(thread_info, SAWA_INFO_COL);
         return;
     }
     
@@ -97,16 +100,14 @@ void SawaServer::processRequest(int socket_fd, ConnectionThread* thread_info, ui
             size = *((uint32_t*)(addr+1+sizeof(int)));
             this->readFile(socket_fd, offset, size);
             // Updates the thread statistics and update the screen (if appropriate)
-            thread_info->info[1]++;
-            screen->refresh_thread(thread_info, 1);
+            updateScreen(thread_info, SAWA_READ_COL);
             break;
         case SAWA_WRITE:
             // Retrieve the message size and process the WRITE command
             size -= (1 + sizeof(int));
             this->writeFile(socket_fd, addr + 1 + sizeof(int), offset, size);
             // Updates the thread statistics and update the screen (if appropriate)
-            thread_info->info[2]++;
-            screen->refresh_thread(thread_info, 2);
+            updateScreen(thread_info, SAWA_WRITE_COL);
             break;
     }
 }
