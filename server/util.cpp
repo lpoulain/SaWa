@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <string.h>
 
 #include "util.h"
@@ -83,35 +84,31 @@ char ascii[256] = {
 };
 
 void Util::dumpMem(uint8_t *addr, int size) {
-    int i, j=0;
+    int i, j=0, k;
     char ascii_row[16];
     
     if (debug_flag == 0) return;
     
     memset(ascii_row, ' ', 16);
     
-    screen->debug("Received %d bytes\n", size);
     while (1) {
         if (j >= size) return;
-        printf("%04x ", j);
+        cout << " " << setfill('0') << setw(4) << hex << j;
         for (i=0; i<16; i++) {
             if (j >= size) {
-                printf("   %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n",
-                        ascii_row[0], ascii_row[1], ascii_row[2], ascii_row[3],
-                        ascii_row[4], ascii_row[5], ascii_row[6], ascii_row[7],
-                        ascii_row[8], ascii_row[9], ascii_row[10], ascii_row[11],
-                        ascii_row[12], ascii_row[13], ascii_row[14], ascii_row[15]);
+                for (k=i; k<16; k++) cout << "   ";
+                cout << "   ";
+                for (k=0; k<16; k++) cout << ascii_row[k];
+                cout << endl;
                 return;
             }
             ascii_row[i] = ascii[addr[j]];
-            printf(" %02x", addr[j]);
+            cout << " " << setfill('0') << setw(2) << hex << int(addr[i]);
             j++;
         }
-        printf("   %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n",
-                ascii_row[0], ascii_row[1], ascii_row[2], ascii_row[3],
-                ascii_row[4], ascii_row[5], ascii_row[6], ascii_row[7],
-                ascii_row[8], ascii_row[9], ascii_row[10], ascii_row[11],
-                ascii_row[12], ascii_row[13], ascii_row[14], ascii_row[15]);
+        cout << "   ";
+        for (k=0; k<16; k++) cout << ascii_row[k];
+        cout << endl;
         memset(ascii_row, ' ', 16);
     }
 }

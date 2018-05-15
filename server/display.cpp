@@ -28,17 +28,17 @@ class DisplayDefault : public Display {
     
 public:    
     void init() override {
-        char buffer[32];
+        string buffer("Server started on port ");
         int i;
 
-        sprintf(buffer, "Server started on port %d\n", server->port);
+        buffer += to_string(server->port);
 
         initscr();
         cbreak();
         noecho();
         clear();
 
-        mvaddstr(0, 0, buffer);
+        mvaddstr(0, 0, buffer.c_str());
         mvaddstr(1, 0, "Thread# Active? #Conn");
         for (i=0; i<3; i++) {
             if (!info_label[i].empty()) mvaddstr(1, 24 + i*8, info_label[i].c_str());
@@ -48,29 +48,22 @@ public:
     }
 
     void refresh_thread(ConnectionThread *thread_info, int i) override {
-        char buffer[6];
+        string buffer = to_string(thread_info->info[i]);
 
         if (info_label[i].empty()) return;
 
-        memset(buffer, 6, 0);
-        sprintf(buffer, "%d", thread_info->info[i]);
-        
         pthread_mutex_lock(&display_lock);
-            mvaddstr(thread_info->nb + 2, 24 + i*8, buffer);
+            mvaddstr(thread_info->nb + 2, 24 + i*8, buffer.c_str());
             refresh();
         pthread_mutex_unlock(&display_lock);
     }
 
     // Displays the thread statistics
     void thread_update(ConnectionThread *thread_info) override {
-        char buffer[6];
-        int i;
+        string buffer = to_string(thread_info->nb_connections);
 
-        memset(buffer, 6, 0);
-        sprintf(buffer, "%d", thread_info->nb_connections);
-        
         pthread_mutex_lock(&display_lock);
-            mvaddstr(thread_info->nb + 2, 16, buffer);
+            mvaddstr(thread_info->nb + 2, 16, buffer.c_str());
             refresh();
         pthread_mutex_unlock(&display_lock);
     }
@@ -87,11 +80,9 @@ public:
 
     // Displays the thread number
     void new_thread(ConnectionThread *thread_info) override {
-        char buffer[6];
-        memset(buffer, 6, 0);
-        sprintf(buffer, "%d", thread_info->nb);
+        string buffer = to_string(thread_info->nb);
 
-        mvaddstr(thread_info->nb + 2, 0, buffer);
+        mvaddstr(thread_info->nb + 2, 0, buffer.c_str());
 
         this->thread_update(thread_info);
         this->status(thread_info, 1);

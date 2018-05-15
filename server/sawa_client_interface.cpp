@@ -13,31 +13,14 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include "sawa_client_interface.h"
+#include "util.h"
 
 using namespace std;
 
 int server_port = 5000;
 int admin_port = 5001;
+int debug_flag = 1;
 extern int debug;
-
-void dump_mem(unsigned char *addr, int size) {
-    if (!debug) return;
-    
-    int i, j=0;
-    printf("Received %d bytes\n", size);
-    while (1) {
-        printf("%04x ", j);
-        for (i=0; i<16; i++) {
-            if (j >= size) {
-                printf("\n");
-                return;
-            }
-            printf(" %02x", addr[j]);
-            j++;
-        }
-        printf("\n");
-    }
-}
 
 typedef struct {
 	volatile int counter;
@@ -100,7 +83,7 @@ int SawaInterface::readFromServer(uint8_t **buffer_in) {
     *buffer_in = new uint8_t[payload_size];
     n = read(socket_fd, *buffer_in, payload_size);
 
-    dump_mem(*buffer_in, n);
+    Util::dumpMem(*buffer_in, n);
     
     return payload_size;
 }
@@ -114,13 +97,13 @@ SawaInterface::SawaInterface(int port) {
     server_addr.sin_family = AF_INET;
     if(inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr)<=0)
     {
-        printf("\n inet_pton error occured\n");
+        cerr << endl << "inet_pton error occured" << endl;
         exit(1);
     } 
     server_addr.sin_port = htons(port);
     
     if (connect(socket_fd, (struct sockaddr *)&server_addr,sizeof(server_addr)) < 0) {
-        printf("Could not connect to port %d\n", port);
+        cerr << "Could not connect to port " << port << endl;
         exit(1);
     }
 }
@@ -227,7 +210,7 @@ int SawaClient::sendInfoCmd() {
         throw result;
     }
     
-    printf("Number of sectors: %d\n", result);
+    cout << "Number of sectors: " << result << endl;
     
     return result;
 }
@@ -249,17 +232,17 @@ void SawaClient::sendStatCmd() {
     nb_threads = n / sizeof(ThreadStat);
     thread_stats = (ThreadStat*)buffer_in;
     
-    printf("There are %d threads\n", nb_threads);
-    printf("Thread# Active? #Conn   Info    Reads   Writes\n");
+    cout << dec;
+    cout << "There are " << nb_threads << " threads" << endl;
+    cout << "Thread# Active? #Conn   Info    Reads   Writes" << endl;
     
     for (i=0; i<nb_threads; i++) {
-        printf("%d\t%d\t%d\t%d\t%d\t%d\n",
-               i,
-               thread_stats[i].active,
-               thread_stats[i].nb_connections,
-               thread_stats[i].info[0],
-               thread_stats[i].info[1],
-               thread_stats[i].info[2]);
+        cout << i << '\t' <<
+                thread_stats[i].active << '\t' <<
+                thread_stats[i].nb_connections << '\t' <<
+                thread_stats[i].info[0] << '\t' <<
+                thread_stats[i].info[1] << '\t' <<
+                thread_stats[i].info[2] << endl;
     }
     
     delete [] buffer_in;
@@ -291,7 +274,7 @@ void *SawaClient::threadTest(void *arg) {
     uint8_t *buffer_out = new uint8_t[4096];
     uint8_t *buffer_in;
     
-    for (i=0; i<255; i++) {
+    for (i=0; i<256; i++) {
         for (j=0; j<4096; j++) {
             buffer_out[j] = (i + j) % 256;
         }
@@ -302,14 +285,14 @@ void *SawaClient::threadTest(void *arg) {
         buffer_in = sawaClient.sendReadCmd(i*4096, 4096, &sawa);
         
         if (strncmp((const char *)buffer_in, (const char *)buffer_out, 4096) != 0)
-            printf("Error page %d, read/write operation failed\n", i);
+            cerr << "Error page " << i << " read/write operation failed" << endl;
         
         delete [] buffer_in;
     }
 
     delete [] buffer;
     
-    printf("End thread %ld\n", thread_id);
+    cout << "End thread " << thread_id << endl;
     atomic_dec(&test_counter);
 }
 
@@ -343,7 +326,7 @@ void SawaClient::testServer(int nb_threads) {
     struct timeval starttime, endtime, timediff;
     
     if (nb_threads > 10) nb_threads = 10;
-    printf("Staring test...\n");
+    cout << "Staring test..." << endl;
     
     gettimeofday(&starttime,0x0);
     atomic_set(&test_counter, nb_threads);
@@ -357,7 +340,7 @@ void SawaClient::testServer(int nb_threads) {
     gettimeofday(&endtime,0x0);
     
     timeval_subtract(&timediff,&endtime,&starttime);
-    printf("Test completed in %d seconds and %d ms\n", (int)timediff.tv_sec, (int)timediff.tv_usec / 1000);
+    cout << "Test completed in " << (int)timediff.tv_sec << " seconds and " << (int)timediff.tv_usec / 1000 << " ms" << endl;
     
     delete [] tid;
 }
@@ -369,7 +352,7 @@ void SawaClient::sendCommand(uint8_t op, int offset, int size) {
     if (op == SAWA_READ) {
         buffer = sendReadCmd(offset, size);
         if (buffer != NULL) {
-            dump_mem(buffer, size);
+            Util::dumpMem(buffer, size);
             delete [] buffer;
         }
     }

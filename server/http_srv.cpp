@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -17,9 +18,9 @@
 
 using namespace std;
 
-const char *HTTP_200 = "HTTP/1.1 200 OK\nKeep-Alive: timeout=15, max=95\nConnection: Keep-Alive\n";
-const char *HTTP_404 = "HTTP/1.1 404 Not Found\nContent-Type: text/html; charset=UTF-8\nContent-Length: 12\n\nError 404 - Not found\n\n";
-const char *HTTP_500 = "HTTP/1.1 500 Server Error\n\n";
+string HTTP_200 = string("HTTP/1.1 200 OK\nKeep-Alive: timeout=15, max=95\nConnection: Keep-Alive\n");
+string HTTP_404 = string("HTTP/1.1 404 Not Found\nContent-Type: text/html; charset=UTF-8\nContent-Length: 12\n\nError 404 - Not found\n\n");
+string HTTP_500 = string("HTTP/1.1 500 Server Error\n\n");
 const char *root_dir = "./wwwroot";
 const char *index_html = "index.html";
 int HTTP_200_len;
@@ -128,7 +129,8 @@ char *HTTPServer::parseUrl(char *buffer_in) {
 // Request 1 if keep alive
 int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, request_message* msg, uint32_t size) {
     struct request_message *tmp_msg = msg;
-    char *buffer_out, *buffer_in = (char*)msg;
+    char *buffer_in = (char*)msg;
+    string buffer_out;
     char *url;
     int header_size;
     int keep_alive = 0;
@@ -138,7 +140,7 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     if (!this->isRequestValid(buffer_in)) {
         updateScreen(thread_info, HTTP_500_COL);
         Util::dumpMem((uint8_t*)msg, 32);
-        write(socket_fd, HTTP_500, HTTP_500_len);
+        write(socket_fd, HTTP_500.c_str(), HTTP_500_len);
         delete msg;
         return 0;
     }
@@ -165,21 +167,18 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     // If the file doesn't exist, return an HTTP 404 message
     if (!the_file) {
         updateScreen(thread_info, HTTP_404_COL);
-        write(socket_fd, HTTP_404, HTTP_404_len);
+        write(socket_fd, HTTP_404.c_str(), HTTP_404_len);
         return 0;
     }
 
     updateScreen(thread_info, HTTP_200_COL);
     
     // Otherwise, write the HTTP headers
-    buffer_out = new char[200];
-    sprintf(buffer_out, "%sContent-Length: %d\nContent-Type: text/html;\n\n", HTTP_200, the_file->getSize());
-    header_size = strlen(buffer_out);
+    buffer_out = HTTP_200 + "Content-Length: " + to_string(the_file->getSize()) + "\nContent-Type: text/html;\n\n";
+    header_size = buffer_out.length();
     
-    write(socket_fd, buffer_out, header_size);
+    write(socket_fd, buffer_out.c_str(), header_size);
     write(socket_fd, the_file->getContent(), the_file->getSize());
-    
-    delete [] buffer_out;
     
     return keep_alive;
 }
@@ -222,9 +221,9 @@ void HTTPServer::readData(ConnectionThread* thread_info) {
 }
 
 HTTPServer::HTTPServer() : Server(8080) {
-    HTTP_200_len = strlen(HTTP_200);
-    HTTP_404_len = strlen(HTTP_404);
-    HTTP_500_len = strlen(HTTP_500);
+    HTTP_200_len = HTTP_200.length();
+    HTTP_404_len = HTTP_404.length();
+    HTTP_500_len = HTTP_500.length();
     root_dir_len = strlen(root_dir);
     index_html_len = strlen(index_html);    
 }
