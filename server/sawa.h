@@ -22,3 +22,4 @@ extern void ctrl_c_handler();
 
 extern void (*op_listen) (ConnectionThread *);
 extern int debug_flag;
+extern int towa_flag;

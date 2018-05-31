@@ -8,6 +8,7 @@ using namespace std;
 
 void ctrl_c_handler(int s) {}
 int debug_flag;
+int towa_flag;
 
 int main() {
     int result;

@@ -15,6 +15,7 @@
 #include "thread_pool.h"
 #include "server.h"
 #include "util.h"
+#include "towa_ipc.h"
 
 using namespace std;
 
@@ -56,6 +57,11 @@ public:
         fseek(fp, 0, SEEK_SET);
         fread(this->content, sizeof(char), this->size, fp);
         fclose(fp);        
+    }
+    
+    WebFile(Message *msg) {
+        this->size = msg->getSize();
+        this->content = (char*)msg->getContent();
     }
     
     ~WebFile() {
@@ -154,7 +160,17 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     // Analysis over. Processing the request
     screen->debug("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
     
-    the_file = this->getFile(url);
+    if (towa_flag) {
+        Message *msg_in;
+        Message *msg_out = new Message(string("test"));
+        TowaPipe *towa = new TowaPipe(true);
+        msg_in = towa->sendMsg(msg_out);
+        
+        the_file = new WebFile(msg_in);
+    }
+    else {
+        the_file = this->getFile(url);
+    }
     
     // We are done reading the HTTP request, free the resource
     delete [] url;

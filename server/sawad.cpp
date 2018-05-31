@@ -22,6 +22,7 @@
 using namespace std;
 
 int debug_flag = 0;
+int towa_flag = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -96,6 +97,7 @@ int main(int argc, char *argv[]) {
     for (i=1; i<argc; i++) {
         if (!strcmp(argv[i], "-daemon")) daemon = true;
         if (!strcmp(argv[i], "-debug")) debug_flag = 1;
+        if (!strcmp(argv[i], "-towa")) towa_flag = 1;
         if (!strcmp(argv[i], "-quiet")) quiet = true;
         if (!strcmp(argv[i], "-help")) {
             cout << "Usage: " << argv[0] << " [-daemon] [-http]\n" << endl;
