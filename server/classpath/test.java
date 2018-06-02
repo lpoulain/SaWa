@@ -42,6 +42,13 @@ class Test extends HttpServlet {
             out.println("<h1>Hello World</h1>");  // Prints "Hello, world!"
             // Set a hyperlink image to refresh this page
 //            out.println("<a href='" + request.getRequestURI() + "'><img src='images/return.gif'></a>");
+	    out.println("<ul>");
+	    Enumeration<String> parameters = request.getParameterNames();
+	    while (parameters.hasMoreElements()) {
+		String param = parameters.nextElement();
+		out.println("<li>" + param + "=" + request.getParameter(param) + "</li>");
+	    }
+	    out.println("</ul>");
             out.println("</body></html>");
         } finally {
             System.out.println("Hello, World end");

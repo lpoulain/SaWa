@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <map>
+#include <regex>
 
 #include "sawa.h"
 #include "display.h"
@@ -16,6 +17,7 @@
 #include "server.h"
 #include "util.h"
 #include "towa_ipc.h"
+#include "towa_mgr.h"
 
 using namespace std;
 
@@ -66,6 +68,18 @@ public:
     
     ~WebFile() {
         delete [] content;
+    }
+};
+
+class HTTPRequest {
+    string path;
+    string queryString;
+    
+public:
+    HTTPRequest(char *buffer_in) {
+        string s(buffer_in);
+        smatch m;
+        regex e("GET (.*)?(.*) HTTP/");
     }
 };
 
@@ -161,10 +175,7 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     screen->debug("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
     
     if (towa_flag) {
-        Message *msg_in;
-        Message *msg_out = new Message(string("test"));
-        TowaPipe *towa = new TowaPipe(true);
-        msg_in = towa->sendMsg(msg_out);
+        Message *msg_in = towaMgr->sendMsg("GET", "Test", "test=yes&haha=no");
         
         the_file = new WebFile(msg_in);
     }
@@ -242,6 +253,11 @@ HTTPServer::HTTPServer() : Server(8080) {
     HTTP_500_len = HTTP_500.length();
     root_dir_len = strlen(root_dir);
     index_html_len = strlen(index_html);    
+    
+    if (towa_flag) {
+        towaMgr = new TowaMgr(namedpipe);
+        towaMgr->start();
+    }
 }
 
 HTTPServer::~HTTPServer() {

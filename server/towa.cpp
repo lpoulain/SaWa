@@ -12,7 +12,7 @@ using namespace std;
 TowaAppPool *app;
 
 Message *callback(Message *msg) {
-    return app->processRequest("Test", msg);
+    return app->processRequest(msg);
 }
 
 int main(int argc, char** argv) {

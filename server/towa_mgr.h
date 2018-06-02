@@ -1,22 +1,23 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/* 
- * File:   towa_mgr.h
- * Author: lpoulain
- *
- * Created on May 28, 2018, 5:19 PM
- */
-
 #ifndef TOWA_MGR_H
 #define TOWA_MGR_H
 
-class ToWaMgr {
+#include <string>
+#include "towa_ipc.h"
+
+#define FAILURE_TOWA_INVALID_TYPE   0x60
+#define FAILURE_TOWA_CANNOT_SPAWN   0x61
+
+enum TowaType { namedpipe, tcpip, sharedmem };
+
+class TowaMgr {
+    pid_t pid;
+    TowaIPC *ipc;
     
+public:
+    TowaMgr(TowaType);
+    void start();
+    void check();
+    Message *sendMsg(string verb, string classname, string querystring);
 };
 
 #endif /* TOWA_MGR_H */
-

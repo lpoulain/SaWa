@@ -1,9 +1,9 @@
 CC=g++
 CFLAGS=-I. -std=gnu++11
 DEPS = 
-SAWAD_OBJ = sawad.o http_srv.o sawa_srv.o thread_pool.o display.o sawa_admin.o server.o util.o towa_ipc.o tinyxml2.o
+SAWAD_OBJ = sawad.o http_srv.o sawa_srv.o thread_pool.o display.o sawa_admin.o server.o util.o towa_ipc.o towa_mgr.o tinyxml2.o
 SAWA_CLIENT_OBJ = sawa_client.o sawa_client_interface.o util.o
-TEST_OBJ = test.o test_helper.o http_srv.o sawa_srv.o thread_pool.o display.o sawa_admin.o server.o util.o towa_ipc.o
+TEST_OBJ = test.o test_helper.o http_srv.o sawa_srv.o thread_pool.o display.o sawa_admin.o server.o util.o towa_ipc.o towa_mgr.o
 
 all: sawad sawa-client test towa
 
@@ -19,7 +19,7 @@ sawad: $(SAWAD_OBJ)
 test: $(TEST_OBJ)
 	g++ -pthread -std=gnu++11 -o $@ $^ $(CFLAGS) -lncurses
 
-towa: towa.cpp towa_ipc.cpp
+towa: towa.cpp towa_ipc.cpp towa_app_pool.cpp
 	g++ -g -o towa -I /usr/lib/jvm/java-1.6.0-openjdk-amd64/include -std=gnu++11 towa.cpp towa_ipc.cpp towa_app_pool.cpp -I. -std=gnu++11 -L/usr/lib/jvm/java-1.6.0-openjdk-amd64/bin/java -L/usr/lib/jvm/java-1.6.0-openjdk-amd64/jre/lib/amd64/server/ -ljvm
 
 clean:

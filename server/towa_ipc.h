@@ -20,11 +20,12 @@ public:
     void sendTo(FILE *);
     uint8_t *getContent();
     int getSize();
+    string getString();
 };
 
 class TowaIPC {
 public:
-    virtual Message *sendMsg(Message *msg) = 0;
+    virtual Message *sendMsg(string verb, string classname, string querystring) = 0;
     virtual void listenToMsg(Message *(*callback)(Message *)) = 0;
 };
 
@@ -32,7 +33,7 @@ class TowaPipe : public TowaIPC {
     FILE *fp_ping;
     FILE *fp_pong;
 public:
-    virtual Message *sendMsg(Message *msg);
+    virtual Message *sendMsg(string verb, string classname, string querystring);
     virtual void listenToMsg(Message *(*callback)(Message *));
     
     TowaPipe(bool);
@@ -40,7 +41,13 @@ public:
 };
 
 class TowaSharedMem : public TowaIPC {
-    
+    virtual Message *sendMsg(string verb, string classname, string querystring);
+    virtual void listenToMsg(Message *(*callback)(Message *));
+};
+
+class TowaTCP : public TowaIPC {
+    virtual Message *sendMsg(string verb, string classname, string querystring);
+    virtual void listenToMsg(Message *(*callback)(Message *));    
 };
 
 #endif /* TOWA_IPC_H */

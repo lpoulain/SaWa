@@ -8,11 +8,14 @@ class TowaAppPool {
     JavaVM *jvm;
     JNIEnv *env;
     
+    jclass RequestClass;
     jclass ResponseClass;
+    jmethodID RequestClassConstructor;
     jmethodID ResponseClassConstructor;
     jmethodID ResponseClassGetOutput;
 public:
-    Message *processRequest(const char *className, Message *msg);
+    Message *processRequest(Message *msg);
+    jobject getTowaRequest(string method, string queryString);
     TowaAppPool();
     ~TowaAppPool();
 };

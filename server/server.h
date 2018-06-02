@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include "towa_mgr.h"
 
 class ConnectionThread;
 struct request_message;
@@ -43,6 +44,7 @@ public:
 };
 
 class HTTPServer : public Server {
+    TowaMgr *towaMgr;
     std::map<std::string, WebFile *> cache;
     
     bool isRequestValid(char *buffer_in);

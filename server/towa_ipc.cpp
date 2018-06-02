@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <iostream>
+#include <string>
 #include <cstdlib>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -9,6 +10,10 @@
 #include "towa_ipc.h"
 
 using namespace std;
+
+///////////////////////////////////////////////////////////////////////////////
+// Message
+///////////////////////////////////////////////////////////////////////////////
 
 Message::Message(FILE *fp) {
     fread((char*)&this->size, 4, 1, fp);
@@ -46,6 +51,14 @@ int Message::getSize() {
     return this->size;
 }
 
+string Message::getString() {
+    return string((const char*)this->content, this->size);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// TowaPipe
+///////////////////////////////////////////////////////////////////////////////
+
 TowaPipe::TowaPipe(bool client) {
     int res;
     const char *ping_mode, *pong_mode;
@@ -78,11 +91,12 @@ TowaPipe::TowaPipe(bool client) {
     
 }
 
-Message *TowaPipe::sendMsg(Message *msg_out) {
+Message *TowaPipe::sendMsg(string verb, string classname, string querystring) {
     Message *msg_in;
+    Message msg_out(verb + string("|") + classname + string("|") + querystring);
     
     fp_ping = fopen("/tmp/towa_ping", "w");
-    msg_out->sendTo(fp_ping);
+    msg_out.sendTo(fp_ping);
     fclose(fp_ping);
     
     fp_pong = fopen("/tmp/towa_pong", "r");
@@ -106,7 +120,14 @@ void TowaPipe::listenToMsg(Message *(*callback)(Message *)) {
     fclose(fp_pong);
 }
 
-TowaPipe::~TowaPipe() {
-//    fclose(fp_ping);
-//    fclose(fp_pong);
-}
+TowaPipe::~TowaPipe() { }
+
+///////////////////////////////////////////////////////////////////////////////
+// TowaTCP / TowaSharedMem stubs
+///////////////////////////////////////////////////////////////////////////////
+
+Message *TowaTCP::sendMsg(string verb, string classname, string querystring) { return NULL; }
+void TowaTCP::listenToMsg(Message *(*callback)(Message *)) { }
+
+Message *TowaSharedMem::sendMsg(string verb, string classname, string querystring) { return NULL; }
+void TowaSharedMem::listenToMsg(Message *(*callback)(Message *)) { }
