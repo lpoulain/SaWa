@@ -47,10 +47,8 @@ class HTTPServer : public Server {
     TowaMgr *towaMgr;
     std::map<std::string, WebFile *> cache;
     
-    bool isRequestValid(char *buffer_in);
-    char *parseUrl(char *buffer_in);
     int processRequest(int socket_fd, ConnectionThread *thread_info, struct request_message *msg, uint32_t size);
-    struct WebFile *getFile(char *path);
+    struct WebFile *getFile(string path);
     
 public:
     HTTPServer();

@@ -4,11 +4,14 @@
 #include <string.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <map>
+#include <iterator>
 #include <regex>
 
 #include "sawa.h"
@@ -51,11 +54,11 @@ public:
     char *getContent() { return content; }
     int getSize() { return size; }
     
-    WebFile(char *path, int file_size) {
+    WebFile(string path, int file_size) {
         this->size = file_size;
         this->content = new char[file_size];
     
-        FILE *fp = fopen(path, "r");
+        FILE *fp = fopen(path.c_str(), "r");
         fseek(fp, 0, SEEK_SET);
         fread(this->content, sizeof(char), this->size, fp);
         fclose(fp);        
@@ -72,76 +75,99 @@ public:
 };
 
 class HTTPRequest {
+    string method;
     string path;
-    string queryString;
+    string query_string;
+    vector<string> headers;
+    bool valid;
+    bool keep_alive;
     
 public:
     HTTPRequest(char *buffer_in) {
-        string s(buffer_in);
+        int idx = 0;
+        istringstream ss(buffer_in);
+        string s;
+        std::getline(ss, s);
+        method = "GET";
+        query_string = "";
+        keep_alive = 0;
         smatch m;
-        regex e("GET (.*)?(.*) HTTP/");
+//        try {
+        regex e("^GET\\s+([\\w\\.\\-/]+)(\\?(.*))?\\s+HTTP");
+        while (std::regex_search (s,m,e)) {
+            for (auto x:m) {
+                switch(idx) {
+                    case 1:
+                        path = x;
+                    case 3:
+                        query_string = x;
+                }
+
+                idx++;
+            }
+
+            s = m.suffix().str();
+        }            
+
+        cout << "Path=" << path << endl;
+        
+        // Checks that the regex successfully parsed the request
+        valid = !path.empty();
+        // Checks whether the connection should be kept alive
+        keep_alive = Util::strnCaseStr(buffer_in, "Connection: Keep-Alive", request_message_len);
     }
+    
+    string getMethod() { return method; }
+    string getPath() { return path; }
+    string getQueryString() { return query_string; }
+    bool isValid() { return valid; }
+    bool isKeepAlive() { return keep_alive; }
 };
 
 // Used to cache the files read from the disk
 // It is a very simplistic cache which does not release anything *ever*
 map<string, WebFile *> cache;
 
-WebFile *HTTPServer::getFile(char* path) {
+inline bool ends_with(std::string const & value, std::string const & ending)
+{
+    if (ending.size() > value.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
+WebFile *HTTPServer::getFile(string path) {
     WebFile *the_file;
     int file_size;
-
+    struct stat st;
+    
+    path = root_dir + path;
+    
     // Check if the file is cached. If it is, return it
     the_file = cache[path];
     if (the_file != nullptr) return the_file;
-
-    // If not, find the file size
-    ifstream in(path, std::ifstream::ate | std::ifstream::binary);
-    file_size = in.tellg(); 
-
-    // The file doesn't exist
-    if (file_size <= 0) return nullptr;
-
+    cout << "Path: " << path << endl;
+    // If not, check if the file exists on the filesystem
+    if (stat(path.c_str(), &st) != 0) return nullptr;
+    
+    // If this is a folder, check for <path>/index.html
+    if (st.st_mode & S_IFDIR != 0) {
+        if (ends_with(path, "/"))
+            path = path + index_html;
+        else
+            path = path + "/" + index_html;
+    
+        cout << "Path (again): " << path << endl;
+        // Check again if the file exists
+        if (stat(path.c_str(), &st) != 0) return nullptr;
+    }
+    
     // The file exists, loads it in memory
+    file_size = st.st_size;
     the_file = new WebFile(path, file_size);
 
     // Then save it in the cache
     cache[path] = the_file;
     
     return the_file;
-}
-
-bool HTTPServer::isRequestValid(char *buffer_in) {
-    return strncmp(buffer_in, "GET /", 5) == 0;
-}
-
-char *HTTPServer::parseUrl(char *buffer_in) {
-    char *url;
-    int first_line_end = strlen(buffer_in), url_start, url_end, url_length;
-    
-    url_start = 4;
-    url_end = 5;
-    while (url_end < first_line_end && buffer_in[url_end] != ' ' && buffer_in[url_end] != '?')
-        url_end++;
-
-    url_length = url_end - url_start;
-
-    if (buffer_in[url_end-1] == '/')
-        url = new char[url_length + root_dir_len + index_html_len + 1];
-    else
-        url = new char[url_length + root_dir_len + 1];
-    
-    strcpy(url, root_dir);
-    strncpy(url + root_dir_len, buffer_in + url_start, url_length);
-
-    if (buffer_in[url_end-1] == '/') {
-        strcpy(url + root_dir_len + url_length, index_html);
-        url_length += index_html_len;
-    }
-        
-    url[url_length + root_dir_len] = 0;
-    
-    return url;
 }
 
 // Process the HTTP request
@@ -153,11 +179,11 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     string buffer_out;
     char *url;
     int header_size;
-    int keep_alive = 0;
     WebFile *the_file;
-
+    HTTPRequest request(buffer_in);
+    
     // If the HTTP request is not valid, return an HTTP error 500
-    if (!this->isRequestValid(buffer_in)) {
+    if (!request.isValid()) {
         updateScreen(thread_info, HTTP_500_COL);
         Util::dumpMem((uint8_t*)msg, 32);
         write(socket_fd, HTTP_500.c_str(), HTTP_500_len);
@@ -165,26 +191,18 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
         return 0;
     }
     
-    // Retrieves the URL from the request
-    url = this->parseUrl(buffer_in);
-    
-    // Checks whether the connection should be kept alive
-    keep_alive = Util::strnCaseStr(buffer_in, "Connection: Keep-Alive", request_message_len);
-    
     // Analysis over. Processing the request
-    screen->debug("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, url, keep_alive);
+    screen->debug("[Socket %d] requested file: [%s]. Keep-alive=%d\n", socket_fd, request.getPath().c_str(), request.isKeepAlive());
     
     if (towa_flag) {
-        Message *msg_in = towaMgr->sendMsg("GET", "Test", "test=yes&haha=no");
-        
+        Message *msg_in = towaMgr->sendMsg(request.getMethod(), request.getPath().substr(1), request.getQueryString());
         the_file = new WebFile(msg_in);
     }
     else {
-        the_file = this->getFile(url);
+        the_file = this->getFile(request.getPath());
     }
     
     // We are done reading the HTTP request, free the resource
-    delete [] url;
     while (tmp_msg != nullptr) {
         tmp_msg = tmp_msg->next;
         delete msg;
@@ -207,7 +225,7 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     write(socket_fd, buffer_out.c_str(), header_size);
     write(socket_fd, the_file->getContent(), the_file->getSize());
     
-    return keep_alive;
+    return request.isKeepAlive();
 }
 
 void HTTPServer::readData(ConnectionThread* thread_info) {

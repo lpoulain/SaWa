@@ -25,11 +25,14 @@ Message *TowaAppPool::processRequest(Message *msg_in) {
         tokens.push_back(item);
     }
     
-    if (tokens.size() < 3) return nullptr;
+    if (tokens.size() < 2) return nullptr;
     
     string method = tokens[0];
     string className = tokens[1];
-    string queryString = tokens[2];
+    string queryString = "";
+    if (tokens.size() >= 3) queryString = tokens[2];
+    
+    cout << "Towa request. Class: " << className << ", query string: " << queryString << endl;
     
     // Instanciates the TowaRequest object
     jobject requestInstance = getTowaRequest(method, queryString);
@@ -74,7 +77,7 @@ TowaAppPool::TowaAppPool() {
     res = JNI_CreateJavaVM(&jvm, (void **)&env, &vm_args); // this is what it can't find
 
     /* invoke the Main.test method using the JNI */
-
+    
     RequestClass = env->FindClass("TowaRequest");
     RequestClassConstructor = env->GetMethodID(RequestClass, "<init>", "(Ljava/lang/String;Ljava/lang/String;)V");
     

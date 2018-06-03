@@ -51,7 +51,7 @@ To uninstall the driver:
 - `umount /mnt`: unmounts the filesystem
 - `make end`: uninstalls the driver
 
-## ApWa (Apache Wannabe)
+## Web Server
 
 `sawad` is designed to handle multiple connections (using different threads). In order to test how well `sawad` handles workload, it has an `-http` option which turns it into a rudimentary Web server, so it can be tested by tools such as `ab`.
 
@@ -60,16 +60,17 @@ To uninstall the driver:
 
 ## ToWa (Tomcat Wannabe - in construction)
 
-On top of being a Web Server, ApWa can also be the frontend for the ToWa Application Server, servicing Java servlets.
+On top of being a Web Server, `sawad` can also be the frontend for the ToWa Application Server, servicing Java servlets.
 
-This module is in construction. It requires several things:
+This module is in construction and is barely working at this point. It requires several things to work properly:
 
-- To run `towa` from the `classpath` folder
-- To uncompress `servlet_api.jar` in the `classpath` folder
-- To start `sawad -http -towa`
+- Copy [`servlet_api.jar`](http://tomcat.apache.org/whichversion.html) to the `classpath` folder. ToWa has been tested with OpenJDK 1.6 and servlet_api.jar version 3.0
+- Start `sawad -http -towa`
+- Call [http://127.0.0.1/Test?doesitwork=yes] to call the Test servlet
 
 ## Architecture
 
 - [Block Driver architecture](./block_driver.md)
 - [SaWa Server architecture](./server.md)
 - [The client/server TCP protocol](./protocol.md)
+- [ToWa architecture](./towa.md)
