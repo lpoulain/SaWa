@@ -67,6 +67,7 @@ This module is in construction and is barely working at this point. It requires 
 - Copy [`servlet_api.jar`](http://tomcat.apache.org/whichversion.html) to the `classpath` folder. ToWa has been tested with OpenJDK 1.6 and servlet_api.jar version 3.0
 - Start `sawad -http -towa`
 - Call [http://127.0.0.1/Test?doesitwork=yes] to call the Test servlet
+- Call [http://127.0.0.1/Kaboom] to see what happens when an exception occurs in the Java code
 
 ## Architecture
 

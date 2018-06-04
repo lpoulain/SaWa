@@ -9,6 +9,7 @@
 
 using namespace std;
 
+int debug_flag = 1;
 TowaAppPool *app;
 
 Message *callback(Message *msg) {

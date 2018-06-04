@@ -15,7 +15,7 @@ When `sawad` is started with the `-http` (Web Server) and `-towa` (ToWa) flags, 
 
 ### Future Enhancements
 
-- Add more reliability to the `towa` process. Right now, if any error happens in the JNI layer (like the requested servlet is not available), the JNI layer issues a SIGSEGV which crashes the `towa` process.
+- Add more reliability to the `towa` process. The `towa` process' stability has improved, and doesn't crash anymore when t class invoked doesn't exist. The reliability is however still not 100% complete.
 - Scan the `classpath` folder for any `.war` file, unzip them if it hasn't already been done and add the path to the classpath
 - Allow the Web Server to both look at the filesystem and servlet requests by reading the `web.xml` mappings
 - Add support for more IPC options between `sawad` and `towa`

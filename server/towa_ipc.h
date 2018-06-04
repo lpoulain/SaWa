@@ -6,21 +6,28 @@
 #define FAILURE_TOWA_IPC_CANNOT_CREATE_PIPE     0x30
 #define FAILURE_TOWA_IPC_CANNOT_OPEN_PIPE     0x31
 
+#define TOWA_HTTP_200   0x01
+#define TOWA_HTTP_404   0x02
+#define TOWA_HTTP_500   0x03
+
+
 using namespace std;
 
 class Message {
     uint8_t *content;
     int size;
+    char header;
     
 public:
     Message(int, uint8_t *);
-    Message(FILE *);
+    Message(FILE *, bool);
     Message(string);
     ~Message();
     void sendTo(FILE *);
     uint8_t *getContent();
     int getSize();
     string getString();
+    char getHeader();
 };
 
 class TowaIPC {

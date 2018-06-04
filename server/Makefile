@@ -19,8 +19,8 @@ sawad: $(SAWAD_OBJ)
 test: $(TEST_OBJ)
 	g++ -pthread -std=gnu++11 -o $@ $^ $(CFLAGS) -lncurses
 
-towa: towa.cpp towa_ipc.cpp towa_app_pool.cpp
-	g++ -g -o towa -I /usr/lib/jvm/java-1.6.0-openjdk-amd64/include -std=gnu++11 towa.cpp towa_ipc.cpp towa_app_pool.cpp -I. -std=gnu++11 -L/usr/lib/jvm/java-1.6.0-openjdk-amd64/bin/java -L/usr/lib/jvm/java-1.6.0-openjdk-amd64/jre/lib/amd64/server/ -ljvm
+towa: towa.cpp towa_ipc.cpp towa_app_pool.cpp util.cpp
+	g++ -g -o towa -I /usr/lib/jvm/java-1.6.0-openjdk-amd64/include -std=gnu++11 towa.cpp towa_ipc.cpp util.cpp towa_app_pool.cpp -I. -std=gnu++11 -L/usr/lib/jvm/java-1.6.0-openjdk-amd64/bin/java -L/usr/lib/jvm/java-1.6.0-openjdk-amd64/jre/lib/amd64/server/ -ljvm
 
 clean:
 	rm *.o

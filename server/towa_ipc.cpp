@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "towa_ipc.h"
+#include "util.h"
 
 using namespace std;
 
@@ -15,12 +16,25 @@ using namespace std;
 // Message
 ///////////////////////////////////////////////////////////////////////////////
 
-Message::Message(FILE *fp) {
-    fread((char*)&this->size, 4, 1, fp);
+Message::Message(FILE *fp, bool hasHeader = false) {
+    int contentSize = 0;
+    
+    this->size = 0;
+    fread((char*)&(this->size), 4, 1, fp);
+    Util::dumpMem((uint8_t*)&this->size, 4);
     
     if (this->size == 0) this->content = nullptr;
+
+    if (hasHeader) {
+        fread((char*)&(this->header), 1, 1, fp);
+        this->size--;
+    }
+    else {
+        contentSize = this->size;
+    }    
+
     this->content = new uint8_t[this->size];
-    fread((char*)this->content, size, 1, fp);
+    fread((char*)this->content, this->size, 1, fp);
 }
 
 Message::Message(int size, uint8_t *content) {
@@ -53,6 +67,10 @@ int Message::getSize() {
 
 string Message::getString() {
     return string((const char*)this->content, this->size);
+}
+
+char Message::getHeader() {
+    return this->header;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -100,7 +118,7 @@ Message *TowaPipe::sendMsg(string verb, string classname, string querystring) {
     fclose(fp_ping);
     
     fp_pong = fopen("/tmp/towa_pong", "r");
-    msg_in = new Message(fp_pong);
+    msg_in = new Message(fp_pong, true);
     fclose(fp_pong);
     
     return msg_in;

@@ -49,6 +49,7 @@ class HTTPServer : public Server {
     
     int processRequest(int socket_fd, ConnectionThread *thread_info, struct request_message *msg, uint32_t size);
     struct WebFile *getFile(string path);
+    string generate500Response(string desc);
     
 public:
     HTTPServer();

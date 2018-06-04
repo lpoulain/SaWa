@@ -14,11 +14,13 @@ class TowaRequest implements HttpServletRequest {
     public TowaRequest(String method, String queryString) {
 	this.method = method;
 	this.queryString = queryString;
+
 	parameters = new HashMap<String, String[]>();
 
 	for (String param : queryString.split("&")) {
 	    String[] values = param.split("=");
-	    parameters.put(values[0], new String[] { values[1] });
+	    if (values.length >= 2)
+		parameters.put(values[0], new String[] { values[1] });
 	}
     }
 

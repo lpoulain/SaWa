@@ -170,12 +170,19 @@ WebFile *HTTPServer::getFile(string path) {
     return the_file;
 }
 
+string HTTPServer::generate500Response(string desc) {
+    string content = "<h1>500 Internal Server Error</h1>\n" + desc;
+    string msg500 = "HTTP/1.1 500 Internal Server Error\nContent-Type: text/html; charset=UTF-8\nContent-Length: " + to_string(content.size()) + "\n\n" + content;
+    
+    return msg500;
+}
+
 // Process the HTTP request
 // Request 0 if close connection
 // Request 1 if keep alive
-int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, request_message* msg, uint32_t size) {
-    struct request_message *tmp_msg = msg;
-    char *buffer_in = (char*)msg;
+int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, request_message* req_msg, uint32_t size) {
+    struct request_message *tmp_msg = req_msg;
+    char *buffer_in = (char*)req_msg;
     string buffer_out;
     char *url;
     int header_size;
@@ -185,9 +192,10 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     // If the HTTP request is not valid, return an HTTP error 500
     if (!request.isValid()) {
         updateScreen(thread_info, HTTP_500_COL);
-        Util::dumpMem((uint8_t*)msg, 32);
-        write(socket_fd, HTTP_500.c_str(), HTTP_500_len);
-        delete msg;
+        Util::dumpMem((uint8_t*)req_msg, 32);
+        buffer_out = generate500Response("Invalid request");
+        write(socket_fd, buffer_out.c_str(), buffer_out.size());
+        delete req_msg;
         return 0;
     }
     
@@ -196,6 +204,22 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     
     if (towa_flag) {
         Message *msg_in = towaMgr->sendMsg(request.getMethod(), request.getPath().substr(1), request.getQueryString());
+        uint8_t *content = msg_in->getContent();
+        switch(msg_in->getHeader()) {
+            case TOWA_HTTP_200:
+                the_file = new WebFile(msg_in);
+                break;
+            case TOWA_HTTP_404:
+                break;
+            default:
+                updateScreen(thread_info, HTTP_500_COL);
+//                Util::dumpMem((uint8_t*)msg, 32);
+                string msg500 = generate500Response(string((char*)content, msg_in->getSize()));
+                write(socket_fd, msg500.c_str(), msg500.size());
+                delete req_msg;
+                return 0;                
+        }
+        
         the_file = new WebFile(msg_in);
     }
     else {
@@ -205,8 +229,8 @@ int HTTPServer::processRequest(int socket_fd, ConnectionThread *thread_info, req
     // We are done reading the HTTP request, free the resource
     while (tmp_msg != nullptr) {
         tmp_msg = tmp_msg->next;
-        delete msg;
-        msg = tmp_msg;
+        delete req_msg;
+        req_msg = tmp_msg;
     }
     
     // If the file doesn't exist, return an HTTP 404 message
