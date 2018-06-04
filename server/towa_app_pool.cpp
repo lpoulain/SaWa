@@ -15,45 +15,32 @@ jobject TowaAppPool::getTowaRequest(string method, string queryString) {
     return env->NewObject(RequestClass, RequestClassConstructor, jmethod, jqueryString);
 }
 
-void _append_exception_trace_messages(
-                        JNIEnv&      a_jni_env,
-                        std::string& a_error_msg,
-                        jthrowable   a_exception,
-                        jmethodID    a_mid_throwable_getCause,
-                        jmethodID    a_mid_throwable_getStackTrace,
-                        jmethodID    a_mid_throwable_toString,
-                        jmethodID    a_mid_frame_toString)
-{
+void TowaAppPool::GetJNIException(jthrowable exc, string& errorMsg) {
     // Get the array of StackTraceElements.
-    jobjectArray frames =
-        (jobjectArray) a_jni_env.CallObjectMethod(
-                                        a_exception,
-                                        a_mid_throwable_getStackTrace);
-    jsize frames_length = a_jni_env.GetArrayLength(frames);
+    jobjectArray frames = (jobjectArray) env->CallObjectMethod(exc, ThrowableClassGetStackTrace);
+    jsize frames_length = env->GetArrayLength(frames);
 
     // Add Throwable.toString() before descending
     // stack trace messages.
     if (0 != frames)
     {
-        jstring msg_obj =
-            (jstring) a_jni_env.CallObjectMethod(a_exception,
-                                                 a_mid_throwable_toString);
-        const char* msg_str = a_jni_env.GetStringUTFChars(msg_obj, 0);
+        jstring msg_obj = (jstring) env->CallObjectMethod(exc, ThrowableClassToString);
+        const char* msg_str = env->GetStringUTFChars(msg_obj, 0);
 
         // If this is not the top-of-the-trace then
         // this is a cause.
-        if (!a_error_msg.empty())
+        if (!errorMsg.empty())
         {
-            a_error_msg += "\nCaused by: ";
-            a_error_msg += msg_str;
+            errorMsg += "\nCaused by: ";
+            errorMsg += msg_str;
         }
         else
         {
-            a_error_msg = msg_str;
+            errorMsg = msg_str;
         }
 
-        a_jni_env.ReleaseStringUTFChars(msg_obj, msg_str);
-        a_jni_env.DeleteLocalRef(msg_obj);
+        env->ReleaseStringUTFChars(msg_obj, msg_str);
+        env->DeleteLocalRef(msg_obj);
     }
 
     // Append stack trace messages if there are any.
@@ -65,75 +52,30 @@ void _append_exception_trace_messages(
             // Get the string returned from the 'toString()'
             // method of the next frame and append it to
             // the error message.
-            jobject frame = a_jni_env.GetObjectArrayElement(frames, i);
-            jstring msg_obj =
-                (jstring) a_jni_env.CallObjectMethod(frame,
-                                                     a_mid_frame_toString);
+            jobject frame = env->GetObjectArrayElement(frames, i);
+            jstring msg_obj = (jstring) env->CallObjectMethod(frame, StackTraceElementClassToString);
 
-            const char* msg_str = a_jni_env.GetStringUTFChars(msg_obj, 0);
+            const char* msg_str = env->GetStringUTFChars(msg_obj, 0);
 
-            a_error_msg += "\n    ";
-            a_error_msg += msg_str;
+            errorMsg += "\n    ";
+            errorMsg += msg_str;
 
-            a_jni_env.ReleaseStringUTFChars(msg_obj, msg_str);
-            a_jni_env.DeleteLocalRef(msg_obj);
-            a_jni_env.DeleteLocalRef(frame);
+            env->ReleaseStringUTFChars(msg_obj, msg_str);
+            env->DeleteLocalRef(msg_obj);
+            env->DeleteLocalRef(frame);
         }
     }
 
-    // If 'a_exception' has a cause then append the
+    // If 'exc' has a cause then append the
     // stack trace messages from the cause.
     if (0 != frames)
     {
-        jthrowable cause = 
-            (jthrowable) a_jni_env.CallObjectMethod(
-                            a_exception,
-                            a_mid_throwable_getCause);
+        jthrowable cause = (jthrowable) env->CallObjectMethod(exc, ThrowableClassGetCause);
         if (0 != cause)
         {
-            _append_exception_trace_messages(a_jni_env,
-                                             a_error_msg, 
-                                             cause,
-                                             a_mid_throwable_getCause,
-                                             a_mid_throwable_getStackTrace,
-                                             a_mid_throwable_toString,
-                                             a_mid_frame_toString);
+            GetJNIException(cause, errorMsg);
         }
     }
-}
-
-string TowaAppPool::GetJNIException(jthrowable exc) {
-    jclass throwable_class = env->FindClass("java/lang/Throwable");
-    jmethodID mid_throwable_getCause =
-    env->GetMethodID(throwable_class,
-                      "getCause",
-                      "()Ljava/lang/Throwable;");
-    jmethodID mid_throwable_getStackTrace =
-    env->GetMethodID(throwable_class,
-                      "getStackTrace",
-                      "()[Ljava/lang/StackTraceElement;");
-    jmethodID mid_throwable_toString =
-    env->GetMethodID(throwable_class,
-                      "toString",
-                      "()Ljava/lang/String;");
-
-    jclass frame_class = env->FindClass("java/lang/StackTraceElement");
-    jmethodID mid_frame_toString =
-    env->GetMethodID(frame_class,
-                      "toString",
-                      "()Ljava/lang/String;");
-
-    string error;
-    _append_exception_trace_messages(*env,
-                                 error,
-                                 exc,
-                                 mid_throwable_getCause,
-                                 mid_throwable_getStackTrace,
-                                 mid_throwable_toString,
-                                 mid_frame_toString);
-    
-    cout << error << endl;
-    return error;
 }
 
 jclass TowaAppPool::findClass(const char *className, string errorTxt) {
@@ -195,7 +137,8 @@ Message *TowaAppPool::processRequest(Message *msg_in) {
         {
             cout << "Java Exception" << endl;
             env->ExceptionClear();
-            string error = GetJNIException(exc);
+            string error;
+            GetJNIException(exc, error);
             msg_out = new Message(string(1, char(TOWA_HTTP_500)) + "<pre>" + error + "</pre>");
         }
         else {
@@ -258,6 +201,14 @@ TowaAppPool::TowaAppPool() {
     ResponseClass = env->FindClass("TowaResponse");
     ResponseClassConstructor = env->GetMethodID(ResponseClass, "<init>", "()V");
     ResponseClassGetOutput = env->GetMethodID(ResponseClass, "getOutput", "()[B");    
+    
+    ThrowableClass = env->FindClass("java/lang/Throwable");
+    ThrowableClassGetCause = env->GetMethodID(ThrowableClass, "getCause", "()Ljava/lang/Throwable;");
+    ThrowableClassGetStackTrace = env->GetMethodID(ThrowableClass, "getStackTrace", "()[Ljava/lang/StackTraceElement;");
+    ThrowableClassToString = env->GetMethodID(ThrowableClass, "toString", "()Ljava/lang/String;");
+
+    StackTraceElementClass = env->FindClass("java/lang/StackTraceElement");
+    StackTraceElementClassToString = env->GetMethodID(StackTraceElementClass, "toString", "()Ljava/lang/String;");    
 }
 
 TowaAppPool::~TowaAppPool() {
